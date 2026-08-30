@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Simple Capture</title>
+<!-- Standalone, mobile-first "just numbers" song logger, reviving the concept from an
+     earlier "Simple EZ Minutes" tool built against a much older version of this suite
+     (before tunebook-library.js, Schema 5, and the current app's officer/session model
+     existed at all). This is a full rebuild against today's real Library and today's real
+     CSV format, not a port of that old file - the old book/title data was hardcoded
+     const arrays in a since-retired app; this reads the real, current tunebook-library.js
+     the same way every other tool in this suite does.
+
+     Deliberately narrow scope, matching Kevin's own original request: event/date/location
+     once, pick a book, then log songs by number alone with a phone-pad layout (1-9, then
+     t/0/b) - no leader names, no notes, no tags, no multi-session, no officers. The output
+     is still a real, genuine Schema 5 CSV the full Minutes app can import directly -
+     confirmed live before shipping this - with Leader(s) simply blank on every row, which
+     the real app already handles cleanly with its own "(leader not recorded)" fallback,
+     not a gap this tool needs to work around.
+
+     Fully standalone - no dependency on shared-utils.js or any other file in the suite -
+     opens tunebook-library.js through a file picker rather than assuming a fixed relative
+     path, so this can live anywhere, same as this suite's other narrow tools. -->
+<style>
+  :root{
+    --paper:#fffdf8; --paper-dark:#f6f0e2; --ink:#241f1a; --ink-soft:#6b5f4d;
+    --ink-faint:#a89a80; --oxblood:#8a2e2e; --oxblood-dark:#6e2424; --line:#e1d5b8;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html, body{ margin:0; padding:0; background:var(--paper-dark); color:var(--ink); font-family:var(--sans); }
+  body{ min-height:100vh; padding-bottom:24px; }
+  .wrap{ max-width:480px; margin:0 auto; padding:16px; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  .sub{ color:var(--ink-soft); font-size:13px; margin:0 0 18px; line-height:1.4; }
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:5px; }
+  input[type="text"], input[type="date"]{ width:100%; font-family:var(--sans); font-size:16px; padding:11px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:14px; background:#fff; }
+  .field:last-child input{ margin-bottom:0; }
+  button{ font-family:var(--sans); cursor:pointer; }
+  .btn-primary{ display:block; width:100%; background:var(--oxblood); color:#fff; border:none; border-radius:10px; padding:16px; font-size:17px; font-weight:700; }
+  .btn-primary:active{ background:var(--oxblood-dark); }
+  .btn-secondary{ display:block; width:100%; background:#fff; color:var(--oxblood); border:1px solid var(--line); border-radius:10px; padding:12px; font-size:15px; font-weight:600; }
+  .btn-secondary:disabled{ opacity:.4; }
+  .book-check-row{ display:flex; flex-direction:column; gap:2px; margin-bottom:14px; }
+  .book-check-item{ display:flex; align-items:center; gap:10px; padding:9px 4px; }
+  .book-check-item input{ width:20px; height:20px; flex-shrink:0; }
+  .book-check-item .swatch{ display:inline-flex; align-items:center; justify-content:center; height:22px; min-width:66px; padding:0 8px; border-radius:999px; font-size:11.5px; font-weight:700; flex-shrink:0; }
+  .book-check-item .name{ font-size:14px; flex:1; }
+  #bookSearchStatus{ font-size:12px; color:var(--oxblood); margin:-8px 0 12px; }
+  #bookSearchAmbiguous{ display:none; flex-wrap:wrap; gap:6px; margin:-8px 0 12px; }
+  #bookSearchAmbiguous button{ font-size:12px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; }
+
+  /* Logging screen */
+  #logScreen{ display:none; }
+  .book-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .book-picker button{ flex:1 1 auto; min-width:100px; padding:14px 10px; border-radius:10px; border:none; font-size:15px; font-weight:700; }
+  .active-book-badge{ display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:700; margin-bottom:10px; }
+  .display-box{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; min-height:64px; }
+  .display-digits{ font-size:32px; font-weight:700; letter-spacing:2px; min-height:38px; }
+  .display-title{ font-size:14px; color:var(--ink-soft); margin-top:4px; min-height:18px; }
+  .display-status{ font-size:12.5px; margin-top:4px; min-height:16px; }
+  .display-status.warn{ color:var(--oxblood); font-weight:600; }
+  .display-status.ok{ color:#3F5B44; }
+  .keypad{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px; }
+  .keypad button{ aspect-ratio:1.5; font-size:24px; font-weight:700; border:1px solid var(--line); border-radius:12px; background:#fff; color:var(--ink); }
+  .keypad button:active{ background:var(--paper-dark); }
+  .keypad button.tb{ font-size:22px; color:var(--oxblood); }
+  .keypad button.zero{ font-size:24px; }
+  .action-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .action-row button{ flex:1; padding:14px; border-radius:10px; font-size:15px; font-weight:700; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  .action-row .backspace{ flex:0 0 64px; font-size:20px; }
+  .action-row.done-btn, .action-row button.done-btn{ background:var(--oxblood); color:#fff; border:none; }
+  .action-row.done-btn.confirm, .action-row button.done-btn.confirm{ background:#a06a00; }
+  .action-row .break-btn{ color:var(--ink-soft); }
+  .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:12.5px; color:var(--ink-soft); }
+  .toolbar a{ color:var(--oxblood); text-decoration:underline; cursor:pointer; }
+  .tally{ font-size:12.5px; color:var(--ink-soft); }
+  .recent-list{ font-size:12.5px; color:var(--ink-soft); max-height:90px; overflow-y:auto; border-top:1px solid var(--line); padding-top:8px; margin-top:8px; }
+  .recent-list div{ padding:2px 0; display:flex; justify-content:space-between; gap:8px; }
+  .recent-list .undo{ color:var(--oxblood); text-decoration:underline; cursor:pointer; flex-shrink:0; }
+  .marker-row{ font-style:italic; color:var(--ink-faint); }
+  .export-row{ display:flex; gap:8px; }
+  .export-row button{ flex:1; }
+  #autosaveRow{ display:none; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft); margin-top:8px; }
+  #autosaveRow label{ display:flex; align-items:center; gap:6px; font-size:12px; text-transform:none; font-weight:400; letter-spacing:0; margin:0; }
+  #autosaveRow input[type="checkbox"]{ width:16px; height:16px; }
+  .no-file-error{ color:var(--oxblood); font-size:13px; margin-top:8px; }
+  #editSetupLink{ font-size:12.5px; color:var(--oxblood); text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Simple Capture</h1>
+  <p class="sub">A phone-friendly logger for a regular sing &mdash; page numbers only, no names. Everything stays on this device until you export it.</p>
+
+  <div class="card" id="loadCard">
+    <div id="dropzone" tabindex="0" role="button" style="border:2px dashed var(--line); border-radius:10px; padding:28px 16px; text-align:center; color:var(--ink-soft); cursor:pointer;">Click to open <strong>tunebook-library.js</strong>&hellip;</div>
+    <input type="file" id="fileInput" accept=".js" style="display:none;">
+    <div id="loadError" class="no-file-error" style="display:none;"></div>
+  </div>
+
+  <div class="card" id="setupCard" style="display:none;">
+    <div class="field">
+      <label for="eventInput">Event name</label>
+      <input type="text" id="eventInput" placeholder="e.g. Tuesday Night Singing">
+    </div>
+    <div class="field">
+      <label for="dateInput">Date</label>
+      <input type="date" id="dateInput">
+    </div>
+    <div class="field">
+      <label for="locationInput">Location (optional)</label>
+      <input type="text" id="locationInput" placeholder="e.g. St. David's, Roland Park">
+    </div>
+    <label>Song sources</label>
+    <div class="book-check-row" id="commonBookRow"></div>
+    <div class="field">
+      <label for="bookSearchInput">Search for another book</label>
+      <input type="text" id="bookSearchInput" placeholder="Type a book name&hellip;" list="bookSearchOptions">
+      <datalist id="bookSearchOptions"></datalist>
+    </div>
+    <div id="bookSearchStatus"></div>
+    <div id="bookSearchAmbiguous"></div>
+    <button type="button" class="btn-secondary" id="bookSearchAddBtn" style="margin-bottom:14px;">Add source</button>
+    <button type="button" class="btn-primary" id="doneSetupBtn">Done &mdash; start logging</button>
+  </div>
+
+  <div id="logScreen">
+    <div class="toolbar">
+      <span id="eventSummary"></span>
+      <a id="editSetupLink">Edit setup</a>
+    </div>
+
+    <div class="card">
+      <div id="bookPickerWrap"></div>
+      <div class="display-box">
+        <div class="display-digits" id="displayDigits">&nbsp;</div>
+        <div class="display-title" id="displayTitle"></div>
+        <div class="display-status" id="displayStatus"></div>
+      </div>
+      <div class="keypad" id="keypad"></div>
+      <div class="action-row">
+        <button type="button" class="backspace" id="backspaceBtn">&#9003;</button>
+        <button type="button" class="break-btn" id="breakBtn">Break</button>
+        <button type="button" class="done-btn" id="doneEntryBtn">Done</button>
+      </div>
+      <div class="tally" id="tally"></div>
+      <div class="recent-list" id="recentList"></div>
+    </div>
+
+    <div class="card">
+      <div class="export-row">
+        <button type="button" class="btn-secondary" id="copyBtn">Copy CSV</button>
+        <button type="button" class="btn-secondary" id="downloadBtn">Download CSV</button>
+      </div>
+      <div id="autosaveRow">
+        <label><input type="checkbox" id="autosaveCheckbox" checked> Autosave every 10 min</label>
+        <a id="autosaveNowBtn" style="color:var(--oxblood); text-decoration:underline; cursor:pointer;">Save now</a>
+      </div>
+      <div id="autosaveNote" style="font-size:11px; color:var(--ink-faint); margin-top:6px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  var libraryData = null;
+  var books = []; // { abbr, name, badgeColor, badgeTextColor, songs: {page: title} | null }
+  var eventName = "", eventDate = "", eventLocation = "";
+  var entries = []; // { type: 'song'|'marker', book, page, song, marker, ts }
+  var activeBookAbbr = null;
+  var typed = "";
+  var pendingUnrecognized = false;
+  var lastAutosaveSnapshot = null;
+  var autosaveTimer = null;
+  var STORAGE_KEY = "simpleCaptureEntriesV1";
+  var SETUP_KEY = "simpleCaptureSetupV1";
+
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("fileInput");
+  var loadError = document.getElementById("loadError");
+  var loadCard = document.getElementById("loadCard");
+  var setupCard = document.getElementById("setupCard");
+  var logScreen = document.getElementById("logScreen");
+  var eventInput = document.getElementById("eventInput");
+  var dateInput = document.getElementById("dateInput");
+  var locationInput = document.getElementById("locationInput");
+  var commonBookRow = document.getElementById("commonBookRow");
+  var bookSearchInput = document.getElementById("bookSearchInput");
+  var bookSearchOptions = document.getElementById("bookSearchOptions");
+  var bookSearchStatus = document.getElementById("bookSearchStatus");
+  var bookSearchAmbiguous = document.getElementById("bookSearchAmbiguous");
+  var bookSearchAddBtn = document.getElementById("bookSearchAddBtn");
+  var doneSetupBtn = document.getElementById("doneSetupBtn");
+  var eventSummary = document.getElementById("eventSummary");
+  var editSetupLink = document.getElementById("editSetupLink");
+  var bookPickerWrap = document.getElementById("bookPickerWrap");
+  var displayDigits = document.getElementById("displayDigits");
+  var displayTitle = document.getElementById("displayTitle");
+  var displayStatus = document.getElementById("displayStatus");
+  var keypad = document.getElementById("keypad");
+  var backspaceBtn = document.getElementById("backspaceBtn");
+  var breakBtn = document.getElementById("breakBtn");
+  var doneEntryBtn = document.getElementById("doneEntryBtn");
+  var tallyEl = document.getElementById("tally");
+  var recentList = document.getElementById("recentList");
+  var copyBtn = document.getElementById("copyBtn");
+  var downloadBtn = document.getElementById("downloadBtn");
+  var autosaveRow = document.getElementById("autosaveRow");
+  var autosaveCheckbox = document.getElementById("autosaveCheckbox");
+  var autosaveNowBtn = document.getElementById("autosaveNowBtn");
+  var autosaveNote = document.getElementById("autosaveNote");
+
+  dropzone.addEventListener("click", function(){ fileInput.click(); });
+  dropzone.addEventListener("keydown", function(e){
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); fileInput.click(); }
+  });
+
+  fileInput.addEventListener("change", function(){
+    var file = this.files && this.files[0];
+    if(!file) return;
+    loadError.style.display = "none";
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result);
+      var lib;
+      try{
+        lib = new Function(text + "\n;return (typeof EZ_MINUTES_TUNEBOOK_LIBRARY !== 'undefined') ? EZ_MINUTES_TUNEBOOK_LIBRARY : undefined;")();
+      }catch(e){
+        loadError.textContent = "Couldn't read that as a tunebook-library.js file: " + e.message;
+        loadError.style.display = "block";
+        return;
+      }
+      if(!lib || !lib.editions){
+        loadError.textContent = "That file loaded, but didn't define EZ_MINUTES_TUNEBOOK_LIBRARY with an editions object \u2014 is it really tunebook-library.js?";
+        loadError.style.display = "block";
+        return;
+      }
+      libraryData = lib;
+      loadCard.style.display = "none";
+      setupCard.style.display = "block";
+      dateInput.value = new Date().toISOString().slice(0,10);
+      renderCommonBooks();
+      renderBookSearchOptions();
+      restoreSetupIfAny();
+    };
+    reader.onerror = function(){
+      loadError.textContent = "Couldn't read that file.";
+      loadError.style.display = "block";
+    };
+    reader.readAsText(file);
+    fileInput.value = "";
+  });
+
+  // ---------------- Setup: book selection ----------------
+
+  var selectedAbbrs = []; // order-preserving list of editionCode-or-custom-string
+
+  function editionByAbbr(abbr){
+    return Object.values(libraryData.editions).find(function(e){ return e.editionCode === abbr; });
+  }
+
+  function bookRecordFor(abbr){
+    var e = editionByAbbr(abbr);
+    if(e){
+      return {
+        abbr: e.editionCode,
+        name: e.commonName || e.titleProper || e.editionCode,
+        badgeColor: e.badgeColor || "#d9d9d9",
+        badgeTextColor: e.badgeTextColor || "#000000",
+        songs: (e.indexStatus === "complete" && e.songs) ? e.songs : null
+      };
+    }
+    // Custom / not-a-real-book source, typed directly
+    return { abbr: abbr, name: abbr, badgeColor: "#d9d9d9", badgeTextColor: "#000000", songs: null };
+  }
+
+  function renderCommonBooks(){
+    var common = Object.values(libraryData.editions).filter(function(e){ return e.ezMinutesVisibility === "common"; });
+    commonBookRow.innerHTML = "";
+    common.forEach(function(e){
+      var row = document.createElement("label");
+      row.className = "book-check-item";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = e.editionCode;
+      cb.addEventListener("change", function(){
+        if(cb.checked) addSelectedAbbr(e.editionCode);
+        else removeSelectedAbbr(e.editionCode);
+      });
+      var swatch = document.createElement("span");
+      swatch.className = "swatch";
+      swatch.style.background = e.badgeColor || "#d9d9d9";
+      swatch.style.color = e.badgeTextColor || "#000000";
+      swatch.textContent = e.editionCode;
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = e.commonName || e.titleProper;
+      row.appendChild(cb);
+      row.appendChild(swatch);
+      row.appendChild(name);
+      row.dataset.abbr = e.editionCode;
+      commonBookRow.appendChild(row);
+    });
+  }
+
+  function renderBookSearchOptions(){
+    var master = (typeof EZ_MINUTES_MASTER_TUNEBOOK_LIST !== "undefined" && EZ_MINUTES_MASTER_TUNEBOOK_LIST.books) || {};
+    bookSearchOptions.innerHTML = "";
+    Object.keys(master).forEach(function(code){
+      var b = master[code];
+      if(!b.editionCode && !b.editionId) return; // exclude bare Work records, no real Edition to pick
+      var name = b.commonName || b.fullTitle;
+      if(!name) return;
+      var opt = document.createElement("option");
+      opt.value = name;
+      bookSearchOptions.appendChild(opt);
+    });
+  }
+
+  function findRealBookByTypedName(typedName){
+    var q = typedName.trim().toLowerCase();
+    if(!q) return null;
+    var indexed = Object.values(libraryData.editions).find(function(e){
+      var name = (e.commonName || e.titleProper || "").toLowerCase();
+      return name === q || (e.editionCode && e.editionCode.toLowerCase() === q);
+    });
+    if(indexed) return { abbr: indexed.editionCode };
+
+    var master = (typeof EZ_MINUTES_MASTER_TUNEBOOK_LIST !== "undefined" && EZ_MINUTES_MASTER_TUNEBOOK_LIST.books) || {};
+    var matches = [];
+    Object.keys(master).forEach(function(code){
+      var b = master[code];
+      if(!b.editionCode && !b.editionId) return;
+      var name = (b.commonName || b.fullTitle || "").toLowerCase();
+      var workName = (b.workTitleProper || "").toLowerCase();
+      if(name === q || code.toLowerCase() === q || workName === q){
+        matches.push({ abbr: code, name: b.commonName || b.fullTitle, publicationYear: b.publicationYear });
+      }
+    });
+    if(matches.length === 1) return matches[0];
+    if(matches.length > 1){
+      matches.sort(function(a,b){ return (parseInt(b.publicationYear,10)||0) - (parseInt(a.publicationYear,10)||0); });
+      return { ambiguous: true, matches: matches };
+    }
+    return null;
+  }
+
+  function renderAmbiguousChoices(matches, onPick){
+    bookSearchAmbiguous.innerHTML = "";
+    matches.forEach(function(m){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = m.name;
+      btn.addEventListener("click", function(){
+        bookSearchAmbiguous.style.display = "none";
+        bookSearchAmbiguous.innerHTML = "";
+        onPick(m.abbr);
+      });
+      bookSearchAmbiguous.appendChild(btn);
+    });
+    bookSearchAmbiguous.style.display = "flex";
+  }
+
+  bookSearchAddBtn.addEventListener("click", function(){
+    var typedName = bookSearchInput.value;
+    if(!typedName.trim()) return;
+    var match = findRealBookByTypedName(typedName);
+    bookSearchAmbiguous.style.display = "none";
+    bookSearchAmbiguous.innerHTML = "";
+    if(match && match.ambiguous){
+      bookSearchStatus.textContent = '"' + typedName.trim() + '" matches ' + match.matches.length + ' real editions \u2014 choose the one actually used:';
+      renderAmbiguousChoices(match.matches, function(abbr){
+        addSelectedAbbr(abbr);
+        bookSearchInput.value = "";
+        bookSearchStatus.textContent = "";
+      });
+      return;
+    }
+    if(match){
+      addSelectedAbbr(match.abbr);
+      bookSearchInput.value = "";
+      bookSearchStatus.textContent = "";
+      return;
+    }
+    // Not a recognized book at all - add as a genuinely custom source
+    addSelectedAbbr(typedName.trim());
+    bookSearchInput.value = "";
+    bookSearchStatus.textContent = "";
+  });
+
+  function addSelectedAbbr(abbr){
+    if(selectedAbbrs.indexOf(abbr) === -1) selectedAbbrs.push(abbr);
+    var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
+    if(cb) cb.checked = true;
+  }
+  function removeSelectedAbbr(abbr){
+    selectedAbbrs = selectedAbbrs.filter(function(a){ return a !== abbr; });
+  }
+
+  function restoreSetupIfAny(){
+    try{
+      var raw = localStorage.getItem(SETUP_KEY);
+      if(!raw) return;
+      var saved = JSON.parse(raw);
+      eventInput.value = saved.event || "";
+      dateInput.value = saved.date || dateInput.value;
+      locationInput.value = saved.location || "";
+      selectedAbbrs = saved.selectedAbbrs || [];
+      selectedAbbrs.forEach(function(abbr){
+        var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
+        if(cb) cb.checked = true;
+      });
+      var rawEntries = localStorage.getItem(STORAGE_KEY);
+      if(rawEntries) entries = JSON.parse(rawEntries);
+    }catch(e){ /* ignore corrupt storage, start fresh */ }
+  }
+
+  function saveSetup(){
+    localStorage.setItem(SETUP_KEY, JSON.stringify({
+      event: eventName, date: eventDate, location: eventLocation, selectedAbbrs: selectedAbbrs
+    }));
+  }
+
+  doneSetupBtn.addEventListener("click", function(){
+    eventName = eventInput.value.trim();
+    eventDate = dateInput.value;
+    eventLocation = locationInput.value.trim();
+    if(!eventName){ eventInput.focus(); return; }
+    if(!eventDate){ dateInput.focus(); return; }
+    if(selectedAbbrs.length === 0){
+      bookSearchStatus.textContent = "Pick at least one song source first.";
+      return;
+    }
+    books = selectedAbbrs.map(bookRecordFor);
+    saveSetup();
+    setupCard.style.display = "none";
+    logScreen.style.display = "block";
+    autosaveRow.style.display = "flex";
+    activeBookAbbr = books.length === 1 ? books[0].abbr : null;
+    renderEventSummary();
+    renderBookPicker();
+    renderKeypad();
+    renderDisplay();
+    renderEntries();
+  });
+
+  editSetupLink.addEventListener("click", function(){
+    logScreen.style.display = "none";
+    setupCard.style.display = "block";
+  });
+
+  function renderEventSummary(){
+    eventSummary.textContent = eventName + " \u00b7 " + eventDate;
+  }
+
+  // ---------------- Logging screen ----------------
+
+  function renderBookPicker(){
+    bookPickerWrap.innerHTML = "";
+    if(books.length === 1){
+      var badge = document.createElement("span");
+      badge.className = "active-book-badge";
+      badge.style.background = books[0].badgeColor;
+      badge.style.color = books[0].badgeTextColor;
+      badge.textContent = books[0].name;
+      bookPickerWrap.appendChild(badge);
+      return;
+    }
+    var row = document.createElement("div");
+    row.className = "book-picker";
+    books.forEach(function(b){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.style.background = b.badgeColor;
+      btn.style.color = b.badgeTextColor;
+      btn.textContent = b.name;
+      if(b.abbr === activeBookAbbr) btn.style.outline = "3px solid " + b.badgeTextColor;
+      btn.addEventListener("click", function(){
+        activeBookAbbr = b.abbr;
+        typed = "";
+        pendingUnrecognized = false;
+        renderBookPicker();
+        renderDisplay();
+      });
+      row.appendChild(btn);
+    });
+    bookPickerWrap.appendChild(row);
+  }
+
+  function renderKeypad(){
+    keypad.innerHTML = "";
+    var keys = ["1","2","3","4","5","6","7","8","9","t","0","b"];
+    keys.forEach(function(k){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = k.toUpperCase();
+      if(k === "t" || k === "b") btn.className = "tb";
+      if(k === "0") btn.className = "zero";
+      btn.addEventListener("click", function(){ pressKey(k); });
+      keypad.appendChild(btn);
+    });
+  }
+
+  function activeBook(){
+    return books.find(function(b){ return b.abbr === activeBookAbbr; });
+  }
+
+  function pressKey(k){
+    if(!activeBookAbbr){ displayStatus.textContent = "Pick a book first."; return; }
+    pendingUnrecognized = false;
+    if(k === "t" || k === "b"){
+      // t/b only makes sense once at least one digit is typed, and only once
+      if(!/^\d+$/.test(typed)) return;
+      typed = typed + k;
+    } else {
+      // once a t/b suffix is set, no more digits until backspace/clear
+      if(/[tb]$/.test(typed)) return;
+      typed = typed + k;
+    }
+    renderDisplay();
+  }
+
+  backspaceBtn.addEventListener("click", function(){
+    typed = typed.slice(0, -1);
+    pendingUnrecognized = false;
+    renderDisplay();
+  });
+
+  function lookupTitle(book, page){
+    if(!book.songs) return null;
+    return book.songs[page] ? book.songs[page].title : undefined;
+  }
+
+  function alreadyLogged(book, page){
+    return entries.some(function(en){ return en.type === "song" && en.book === book.abbr && en.page === page; });
+  }
+
+  function renderDisplay(){
+    displayDigits.textContent = typed || "\u00a0";
+    displayTitle.textContent = "";
+    displayStatus.textContent = "";
+    displayStatus.className = "display-status";
+    doneEntryBtn.textContent = "Done";
+    doneEntryBtn.className = "done-btn";
+
+    if(!activeBookAbbr || !typed){ return; }
+    var book = activeBook();
+    var bareNum = typed.replace(/[tb]$/, "");
+    var suffix = /[tb]$/.exec(typed);
+    var hasT = book.songs && book.songs[bareNum + "t"];
+    var hasB = book.songs && book.songs[bareNum + "b"];
+    var isSplitPage = !!(hasT && hasB) && !suffix;
+
+    if(isSplitPage){
+      displayStatus.textContent = "This page has a top and bottom \u2014 tap T or B.";
+      displayStatus.className = "display-status warn";
+      return;
+    }
+
+    var lookupKey = typed;
+    var title = lookupTitle(book, lookupKey);
+    if(title){
+      displayTitle.textContent = title;
+      if(alreadyLogged(book, lookupKey)){
+        displayStatus.textContent = "Already logged once today.";
+      }
+    } else if(book.songs === null){
+      // Unindexed / custom source - no way to look anything up, just accept the number
+      displayStatus.textContent = "";
+    } else if(title === undefined){
+      if(pendingUnrecognized){
+        displayStatus.textContent = "Tap Done again to add it anyway.";
+        displayStatus.className = "display-status warn";
+        doneEntryBtn.textContent = "Add anyway";
+        doneEntryBtn.className = "done-btn confirm";
+      } else {
+        displayStatus.textContent = "No song found at that page.";
+      }
+    }
+  }
+
+  doneEntryBtn.addEventListener("click", function(){
+    if(!activeBookAbbr || !typed) return;
+    var book = activeBook();
+    var bareNum = typed.replace(/[tb]$/, "");
+    var suffix = /[tb]$/.exec(typed);
+    var hasT = book.songs && book.songs[bareNum + "t"];
+    var hasB = book.songs && book.songs[bareNum + "b"];
+    if(!!(hasT && hasB) && !suffix){
+      // blocked - split page, need t/b first
+      return;
+    }
+    var title = lookupTitle(book, typed);
+    if(title === undefined && book.songs !== null){
+      if(!pendingUnrecognized){
+        pendingUnrecognized = true;
+        renderDisplay();
+        return;
+      }
+    }
+    entries.push({ type: "song", book: book.abbr, page: typed, song: title || "", ts: new Date().toISOString() });
+    typed = "";
+    pendingUnrecognized = false;
+    saveEntries();
+    renderDisplay();
+    renderEntries();
+  });
+
+  breakBtn.addEventListener("click", function(){
+    entries.push({ type: "marker", marker: "RECESS", ts: new Date().toISOString() });
+    typed = "";
+    pendingUnrecognized = false;
+    saveEntries();
+    renderDisplay();
+    renderEntries();
+  });
+
+  function saveEntries(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }
+
+  function renderEntries(){
+    var songCount = entries.filter(function(e){ return e.type === "song"; }).length;
+    tallyEl.textContent = songCount + " song" + (songCount === 1 ? "" : "s") + " logged.";
+
+    recentList.innerHTML = "";
+    var recent = entries.slice(-8).slice().reverse();
+    recent.forEach(function(en){
+      var idx = entries.length - 1 - entries.slice().reverse().indexOf(en);
+      var row = document.createElement("div");
+      if(en.type === "marker"){
+        row.className = "marker-row";
+        row.innerHTML = "<span>" + en.marker + "</span>";
+      } else {
+        var bookName = (books.find(function(b){ return b.abbr === en.book; }) || {}).name || en.book;
+        row.innerHTML = "<span>" + bookName + " " + en.page.toUpperCase() + (en.song ? " \u2014 " + en.song : "") + "</span><span class=\"undo\">undo</span>";
+        row.querySelector(".undo").addEventListener("click", function(){
+          var realIdx = entries.indexOf(en);
+          if(realIdx > -1) entries.splice(realIdx, 1);
+          saveEntries();
+          renderDisplay();
+          renderEntries();
+        });
+      }
+      recentList.appendChild(row);
+    });
+  }
+
+  // ---------------- Export ----------------
+
+  var CSV_HEADER = ["Schema Version","Order of entry","Record Type","Session Label","Session ID","Metadata Field","Metadata Value",
+    "Event","Date","Location","Chair","Vice-Chair","Secretary","Treasurer","Arranger(s)","Chaplain(s)",
+    "Memorial Lesson Leader","Book","Edition Code","Leader(s)","Canonical Leader(s)","Page","Song","Tag","Notes",
+    "Marker","Timestamp ISO","Time entered","Series Code","Event ID","Previous Event ID","Status"];
+
+  function csvCell(v){
+    v = String(v == null ? "" : v);
+    if(/[",\n\r]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+
+  function buildCsv(){
+    var sessionId = "sc" + Date.now().toString(36);
+    var rows = [CSV_HEADER];
+    var order = 1;
+    function commonFields(){
+      return [eventName, eventDate, eventLocation, "", "", "", "", "", "", ""];
+    }
+    // session row
+    rows.push(["5", order++, "session", "", sessionId, "", ""].concat(commonFields()).concat(
+      ["", "", "", "", "", "", "", "", "", new Date().toISOString(), "", "", "", "", ""]));
+    entries.forEach(function(en){
+      var ts = en.ts || new Date().toISOString();
+      var timeEntered = new Date(ts).toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"});
+      if(en.type === "marker"){
+        rows.push(["5", order++, "marker", "", sessionId, "", ""].concat(commonFields()).concat(
+          ["", "", "", "", "", "", "", "", en.marker, ts, timeEntered, "", "", "", ""]));
+      } else {
+        rows.push(["5", order++, "song", "", sessionId, "", ""].concat(commonFields()).concat(
+          [en.book, en.book, "", "", en.page, en.song, "", "", "", ts, timeEntered, "", "", "", ""]));
+      }
+    });
+    return rows.map(function(r){ return r.map(csvCell).join(","); }).join("\r\n");
+  }
+
+  function slugify(s){
+    return (s || "singing").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "singing";
+  }
+
+  function downloadCsv(filenameSuffix){
+    var csv = buildCsv();
+    var blob = new Blob([csv], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = slugify(eventName) + "-" + eventDate + (filenameSuffix || "") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  downloadBtn.addEventListener("click", function(){ downloadCsv(""); });
+
+  copyBtn.addEventListener("click", function(){
+    var csv = buildCsv();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(csv).then(function(){
+        var old = copyBtn.textContent;
+        copyBtn.textContent = "Copied!";
+        setTimeout(function(){ copyBtn.textContent = old; }, 1200);
+      });
+    }
+  });
+
+  // ---------------- Autosave ----------------
+
+  var AUTOSAVE_INTERVAL_MS = 10 * 60 * 1000;
+
+  function doAutosave(){
+    var snapshot = JSON.stringify(entries);
+    if(snapshot === lastAutosaveSnapshot) return;
+    if(entries.length === 0) return;
+    var now = new Date();
+    var timeBadge = String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0");
+    downloadCsv("-autosave-" + timeBadge);
+    lastAutosaveSnapshot = snapshot;
+    autosaveNote.textContent = "Last autosaved at " + now.toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}) + ".";
+  }
+
+  autosaveNowBtn.addEventListener("click", doAutosave);
+  autosaveCheckbox.addEventListener("change", function(){
+    if(autosaveCheckbox.checked){
+      autosaveTimer = setInterval(doAutosave, AUTOSAVE_INTERVAL_MS);
+    } else {
+      clearInterval(autosaveTimer);
+    }
+  });
+  autosaveTimer = setInterval(doAutosave, AUTOSAVE_INTERVAL_MS);
+
+})();
+</script>
+</body>
+</html>
