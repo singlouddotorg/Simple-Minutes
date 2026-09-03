@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Simple Capture</title>
+<title>Simple Minutes</title>
 <!-- Standalone, mobile-first "just numbers" song logger, reviving the concept from an
      earlier "Simple EZ Minutes" tool built against a much older version of this suite
      (before tunebook-library.js, Schema 5, and the current app's officer/session model
@@ -20,9 +20,26 @@
      the real app already handles cleanly with its own "(leader not recorded)" fallback,
      not a gap this tool needs to work around.
 
-     Fully standalone - no dependency on shared-utils.js or any other file in the suite -
-     opens tunebook-library.js through a file picker rather than assuming a fixed relative
-     path, so this can live anywhere, same as this suite's other narrow tools. -->
+     Loads tunebook-library.js automatically from the Tunebook Registry's own real GitHub
+     repo (the exact same file that repo uses, not a separate copy kept manually synced)
+     the moment this page opens, with a short timeout, and only falls back to the manual
+     file picker below if that fetch fails for any reason - no signal at the venue, a
+     blocked or slow connection, or an ad blocker/privacy extension flagging
+     raw.githubusercontent.com specifically (a real, known occurrence). Verified live
+     against the actual, current URL for the success path, an immediately-rejected fetch,
+     and a genuinely hung one that only resolves via the timeout - all three fall through
+     to the same, fully-working manual picker. Still no dependency on shared-utils.js or
+     any other file in the suite beyond this one fetch, so it still works fully offline
+     once loaded once, same as every other tool here.
+
+     Saving: matches the main Minutes app's own real approach exactly (silent, immediate
+     localStorage persistence on every change, a passive "Saved locally at..." status
+     line, a clear error message if the save itself ever fails) rather than this tool's
+     own earlier, separate "autosave every 10 minutes" idea, which downloaded a real file
+     on a timer. The main app dropped that same idea already; a periodic download
+     prompt/notification popping up mid-singing on a phone specifically was the concern
+     that settled it here too. Download/Copy stay as the real, standing export actions -
+     no file is ever written until one of those is actually tapped. -->
 <style>
   :root{
     --paper:#fffdf8; --paper-dark:#f6f0e2; --ink:#241f1a; --ink-soft:#6b5f4d;
@@ -84,22 +101,30 @@
   .marker-row{ font-style:italic; color:var(--ink-faint); }
   .export-row{ display:flex; gap:8px; }
   .export-row button{ flex:1; }
-  #autosaveRow{ display:none; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft); margin-top:8px; }
-  #autosaveRow label{ display:flex; align-items:center; gap:6px; font-size:12px; text-transform:none; font-weight:400; letter-spacing:0; margin:0; }
-  #autosaveRow input[type="checkbox"]{ width:16px; height:16px; }
+  #localSaveStatus{ display:none; font-size:12px; color:var(--ink-soft); margin-top:8px; }
+  #localSaveStatus.error{ color:var(--oxblood); font-weight:600; }
   .no-file-error{ color:var(--oxblood); font-size:13px; margin-top:8px; }
   #editSetupLink{ font-size:12.5px; color:var(--oxblood); text-decoration:underline; cursor:pointer; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Simple Capture</h1>
+  <h1>Simple Minutes</h1>
   <p class="sub">A phone-friendly logger for a regular sing &mdash; page numbers only, no names. Everything stays on this device until you export it.</p>
 
-  <div class="card" id="loadCard">
+  <div class="card" id="autoLoadCard" style="display:none; text-align:center; color:var(--ink-soft); font-size:14px;">Loading song sources&hellip;</div>
+
+  <div class="card" id="loadCard" style="display:none;">
     <div id="dropzone" tabindex="0" role="button" style="border:2px dashed var(--line); border-radius:10px; padding:28px 16px; text-align:center; color:var(--ink-soft); cursor:pointer;">Click to open <strong>tunebook-library.js</strong>&hellip;</div>
     <input type="file" id="fileInput" accept=".js" style="display:none;">
     <div id="loadError" class="no-file-error" style="display:none;"></div>
+  </div>
+
+  <div class="card" id="resumeCard" style="display:none;">
+    <p style="margin:0 0 14px; font-size:14px;">There's a saved log already on this device:</p>
+    <p id="resumeSummary" style="margin:0 0 16px; font-size:15px; font-weight:700;"></p>
+    <button type="button" class="btn-primary" id="resumeContinueBtn" style="margin-bottom:10px;">Continue this log</button>
+    <button type="button" class="btn-secondary" id="resumeFreshBtn">Start a new log instead</button>
   </div>
 
   <div class="card" id="setupCard" style="display:none;">
@@ -131,7 +156,7 @@
   <div id="logScreen">
     <div class="toolbar">
       <span id="eventSummary"></span>
-      <a id="editSetupLink">Edit setup</a>
+      <span><a id="editSetupLink">Edit setup</a> &middot; <a id="resetLink">Start new log</a></span>
     </div>
 
     <div class="card">
@@ -156,11 +181,7 @@
         <button type="button" class="btn-secondary" id="copyBtn">Copy CSV</button>
         <button type="button" class="btn-secondary" id="downloadBtn">Download CSV</button>
       </div>
-      <div id="autosaveRow">
-        <label><input type="checkbox" id="autosaveCheckbox" checked> Autosave every 10 min</label>
-        <a id="autosaveNowBtn" style="color:var(--oxblood); text-decoration:underline; cursor:pointer;">Save now</a>
-      </div>
-      <div id="autosaveNote" style="font-size:11px; color:var(--ink-faint); margin-top:6px;"></div>
+      <div id="localSaveStatus"></div>
     </div>
   </div>
 </div>
@@ -175,10 +196,9 @@
   var activeBookAbbr = null;
   var typed = "";
   var pendingUnrecognized = false;
-  var lastAutosaveSnapshot = null;
-  var autosaveTimer = null;
-  var STORAGE_KEY = "simpleCaptureEntriesV1";
-  var SETUP_KEY = "simpleCaptureSetupV1";
+
+  var STORAGE_KEY = "simpleMinutesEntriesV1";
+  var SETUP_KEY = "simpleMinutesSetupV1";
 
   var dropzone = document.getElementById("dropzone");
   var fileInput = document.getElementById("fileInput");
@@ -210,10 +230,87 @@
   var recentList = document.getElementById("recentList");
   var copyBtn = document.getElementById("copyBtn");
   var downloadBtn = document.getElementById("downloadBtn");
-  var autosaveRow = document.getElementById("autosaveRow");
-  var autosaveCheckbox = document.getElementById("autosaveCheckbox");
-  var autosaveNowBtn = document.getElementById("autosaveNowBtn");
-  var autosaveNote = document.getElementById("autosaveNote");
+  var localSaveStatusEl = document.getElementById("localSaveStatus");
+
+  var autoLoadCard = document.getElementById("autoLoadCard");
+  // Real, confirmed URL - GitHub serves raw file content from here with permissive CORS,
+  // so this fetch() succeeds cross-origin same as it would same-origin. This is the exact
+  // same tunebook-library.js the Tunebook Registry itself uses, not a separate copy this
+  // tool would otherwise need to keep manually synced.
+  var LIBRARY_FETCH_URL = "https://raw.githubusercontent.com/singlouddotorg/tunebook-registry/main/tunebook-library.js";
+  var LIBRARY_FETCH_TIMEOUT_MS = 4000;
+
+  function proceedWithLibraryText(text, onFail){
+    var lib;
+    try{
+      lib = new Function(text + "\n;return (typeof EZ_MINUTES_TUNEBOOK_LIBRARY !== 'undefined') ? EZ_MINUTES_TUNEBOOK_LIBRARY : undefined;")();
+    }catch(e){
+      onFail("Couldn't read that as a tunebook-library.js file: " + e.message);
+      return;
+    }
+    if(!lib || !lib.editions){
+      onFail("That file loaded, but didn't define EZ_MINUTES_TUNEBOOK_LIBRARY with an editions object \u2014 is it really tunebook-library.js?");
+      return;
+    }
+    libraryData = lib;
+    autoLoadCard.style.display = "none";
+    loadCard.style.display = "none";
+    renderCommonBooks();
+    renderBookSearchOptions();
+    // v146 addition: reopening this after a completed sing used to silently restore
+    // last time's event/date/entries with no indication anything was restored at all -
+    // a genuine data-corruption risk for the tool's own stated, recurring use case (the
+    // same regular sing, used again next week): old entries would silently accumulate
+    // under this week's session, the "already logged" check would misfire against last
+    // week's songs, and the date field would keep showing last week's date rather than
+    // defaulting to today. Now surfaces the choice explicitly, the same principle the
+    // main Minutes app's own New Singing vs. Open Singing landing screen already uses,
+    // rather than a silent tool-specific shortcut around it.
+    if(hasSavedLog()){
+      showResumeChoice();
+    } else {
+      dateInput.value = new Date().toISOString().slice(0,10);
+      setupCard.style.display = "block";
+    }
+  }
+
+  function showManualPicker(){
+    autoLoadCard.style.display = "none";
+    loadCard.style.display = "block";
+  }
+
+  // Automatic load on open, falling back to the manual picker below if it fails for any
+  // reason - no signal at the venue, the fetch itself blocked by an ad blocker or privacy
+  // extension flagging raw.githubusercontent.com (a real, known occurrence, not
+  // hypothetical), or anything else. A short, explicit timeout matters here specifically -
+  // this tool's whole premise is minimizing steps before a song can be logged, so a slow
+  // or hung request should fall back promptly rather than leave someone staring at
+  // "Loading..." mid-singing.
+  autoLoadCard.style.display = "block";
+  (function attemptAutoLoad(){
+    var timedOut = false;
+    var timer = setTimeout(function(){
+      timedOut = true;
+      showManualPicker();
+    }, LIBRARY_FETCH_TIMEOUT_MS);
+    fetch(LIBRARY_FETCH_URL).then(function(res){
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    }).then(function(text){
+      if(timedOut) return; // manual picker already shown, don't yank it away underneath them
+      clearTimeout(timer);
+      proceedWithLibraryText(text, function(){
+        // Auto-fetched content didn't actually parse as a real library - treat this the
+        // same as a network failure and fall back to the manual picker, rather than
+        // showing a confusing error about a file the person never chose themselves.
+        showManualPicker();
+      });
+    }).catch(function(){
+      if(timedOut) return;
+      clearTimeout(timer);
+      showManualPicker();
+    });
+  })();
 
   dropzone.addEventListener("click", function(){ fileInput.click(); });
   dropzone.addEventListener("keydown", function(e){
@@ -226,27 +323,10 @@
     loadError.style.display = "none";
     var reader = new FileReader();
     reader.onload = function(){
-      var text = String(reader.result);
-      var lib;
-      try{
-        lib = new Function(text + "\n;return (typeof EZ_MINUTES_TUNEBOOK_LIBRARY !== 'undefined') ? EZ_MINUTES_TUNEBOOK_LIBRARY : undefined;")();
-      }catch(e){
-        loadError.textContent = "Couldn't read that as a tunebook-library.js file: " + e.message;
+      proceedWithLibraryText(String(reader.result), function(message){
+        loadError.textContent = message;
         loadError.style.display = "block";
-        return;
-      }
-      if(!lib || !lib.editions){
-        loadError.textContent = "That file loaded, but didn't define EZ_MINUTES_TUNEBOOK_LIBRARY with an editions object \u2014 is it really tunebook-library.js?";
-        loadError.style.display = "block";
-        return;
-      }
-      libraryData = lib;
-      loadCard.style.display = "none";
-      setupCard.style.display = "block";
-      dateInput.value = new Date().toISOString().slice(0,10);
-      renderCommonBooks();
-      renderBookSearchOptions();
-      restoreSetupIfAny();
+      });
     };
     reader.onerror = function(){
       loadError.textContent = "Couldn't read that file.";
@@ -402,28 +482,145 @@
     selectedAbbrs = selectedAbbrs.filter(function(a){ return a !== abbr; });
   }
 
-  function restoreSetupIfAny(){
+  var resumeCard = document.getElementById("resumeCard");
+  var resumeSummary = document.getElementById("resumeSummary");
+  var resumeContinueBtn = document.getElementById("resumeContinueBtn");
+  var resumeFreshBtn = document.getElementById("resumeFreshBtn");
+  var resetLink = document.getElementById("resetLink");
+
+  function hasSavedLog(){
     try{
       var raw = localStorage.getItem(SETUP_KEY);
-      if(!raw) return;
+      if(!raw) return false;
       var saved = JSON.parse(raw);
-      eventInput.value = saved.event || "";
-      dateInput.value = saved.date || dateInput.value;
-      locationInput.value = saved.location || "";
-      selectedAbbrs = saved.selectedAbbrs || [];
-      selectedAbbrs.forEach(function(abbr){
-        var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
-        if(cb) cb.checked = true;
-      });
-      var rawEntries = localStorage.getItem(STORAGE_KEY);
-      if(rawEntries) entries = JSON.parse(rawEntries);
-    }catch(e){ /* ignore corrupt storage, start fresh */ }
+      return !!(saved && saved.event);
+    }catch(e){ return false; }
   }
+
+  function showResumeChoice(){
+    var saved = JSON.parse(localStorage.getItem(SETUP_KEY));
+    var savedEntries = [];
+    try{ savedEntries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }catch(e){}
+    var songCount = savedEntries.filter(function(e){ return e.type === "song"; }).length;
+    resumeSummary.textContent = saved.event + " \u2014 " + saved.date + " (" + songCount + " song" + (songCount === 1 ? "" : "s") + " logged)";
+    resumeCard.style.display = "block";
+  }
+
+  function loadSavedSetupAndEntries(){
+    var saved = JSON.parse(localStorage.getItem(SETUP_KEY));
+    eventInput.value = saved.event || "";
+    dateInput.value = saved.date || new Date().toISOString().slice(0,10);
+    locationInput.value = saved.location || "";
+    selectedAbbrs = saved.selectedAbbrs || [];
+    selectedAbbrs.forEach(function(abbr){
+      var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
+      if(cb) cb.checked = true;
+    });
+    try{ entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }catch(e){ entries = []; }
+  }
+
+  function clearSavedLog(){
+    localStorage.removeItem(SETUP_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    entries = [];
+    selectedAbbrs = [];
+    eventInput.value = "";
+    locationInput.value = "";
+    dateInput.value = new Date().toISOString().slice(0,10);
+    commonBookRow.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+    currentSeriesCode = null; currentEventId = null; currentPreviousEventId = "";
+  }
+
+  resumeContinueBtn.addEventListener("click", function(){
+    loadSavedSetupAndEntries();
+    resumeCard.style.display = "none";
+    // Setup was already completed last time - go straight back to logging, same as
+    // simply having kept the tab open, rather than making them click through Setup again.
+    eventName = eventInput.value.trim();
+    eventDate = dateInput.value;
+    eventLocation = locationInput.value.trim();
+    books = selectedAbbrs.map(bookRecordFor);
+    resolveSeriesFor(eventName, eventDate);
+    logScreen.style.display = "block";
+    activeBookAbbr = books.length === 1 ? books[0].abbr : null;
+    renderEventSummary();
+    renderBookPicker();
+    renderKeypad();
+    renderDisplay();
+    renderEntries();
+  });
+
+  resumeFreshBtn.addEventListener("click", function(){
+    // This is arguably the riskier of the two "start fresh" paths, not the safer one -
+    // it's shown right when reopening might mean a full week's worth of songs from last
+    // time were never actually exported. The mid-session reset link already confirms
+    // before clearing; this one silently didn't, which was the real, concrete gap this
+    // question surfaced - not a missing "End Singing" button, since the ending moment is
+    // already handled more safely by asking here, at the START of the next singing, than
+    // a dedicated end-of-singing button ever could (no risk of tapping "end" and then
+    // realizing there's one more song, with nowhere to put it).
+    var savedEntries = [];
+    try{ savedEntries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }catch(e){}
+    var songCount = savedEntries.filter(function(e){ return e.type === "song"; }).length;
+    if(songCount > 0 && !confirm("Start a new log? This permanently clears the " + songCount + " song" + (songCount === 1 ? "" : "s") + " already recorded. Go back and download or copy the CSV first if you still need it.")) return;
+    clearSavedLog();
+    resumeCard.style.display = "none";
+    setupCard.style.display = "block";
+  });
+
+  resetLink.addEventListener("click", function(){
+    if(!confirm("Start a new log? This clears everything recorded so far on this device. Download or copy the CSV first if you still need it.")) return;
+    clearSavedLog();
+    logScreen.style.display = "none";
+    setupCard.style.display = "block";
+  });
 
   function saveSetup(){
     localStorage.setItem(SETUP_KEY, JSON.stringify({
       event: eventName, date: eventDate, location: eventLocation, selectedAbbrs: selectedAbbrs
     }));
+  }
+
+  var SERIES_REGISTRY_KEY = "simpleMinutesSeriesRegistryV1";
+  var currentSeriesCode = null, currentEventId = null, currentPreviousEventId = "";
+
+  // Quiet Series Code / Event ID linking, matching the main Minutes app's own real
+  // convention exactly (a random, non-human-readable code plus {code}-{date} as the
+  // Event ID) - but resolved automatically here rather than asked about. A "regular
+  // sing" logged with the same event name each time is exactly the shape of thing that
+  // real, connected identity across years is for; this just never surfaces a code or a
+  // decision to Kevin, keyed by event name alone. Only resolved once per logging
+  // session, the first time Setup completes and currentSeriesCode is still unset - not
+  // re-resolved if "Edit setup" is used to tweak something (a book, the location) and
+  // "Done" is clicked again mid-session, which would otherwise treat that as a second,
+  // separate event in the same chain.
+  function resolveSeriesFor(name, date){
+    if(currentSeriesCode !== null) return; // already resolved for this logging session
+    var registry = {};
+    try{ registry = JSON.parse(localStorage.getItem(SERIES_REGISTRY_KEY) || "{}"); }catch(e){}
+    var key = name.trim().toLowerCase();
+    var existing = registry[key];
+    if(existing){
+      currentSeriesCode = existing.seriesCode;
+      var computedEventId = currentSeriesCode + "-" + date;
+      if(computedEventId === existing.lastEventId){
+        // Resuming the exact same event (same series + same date) after a reload -
+        // this isn't a new event in the chain, so don't advance it. Reuse whatever
+        // previousEventId this same event was already given the first time it was set
+        // up, rather than pointing it at itself.
+        currentPreviousEventId = existing.lastPreviousEventId || "";
+        currentEventId = computedEventId;
+        return;
+      }
+      currentPreviousEventId = existing.lastEventId || "";
+      currentEventId = computedEventId;
+    } else {
+      currentSeriesCode = (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(0,8);
+      currentPreviousEventId = "";
+      currentEventId = currentSeriesCode + "-" + date;
+    }
+    registry[key] = { seriesCode: currentSeriesCode, lastEventId: currentEventId, lastPreviousEventId: currentPreviousEventId };
+    localStorage.setItem(SERIES_REGISTRY_KEY, JSON.stringify(registry));
   }
 
   doneSetupBtn.addEventListener("click", function(){
@@ -437,10 +634,10 @@
       return;
     }
     books = selectedAbbrs.map(bookRecordFor);
+    resolveSeriesFor(eventName, eventDate);
     saveSetup();
     setupCard.style.display = "none";
     logScreen.style.display = "block";
-    autosaveRow.style.display = "flex";
     activeBookAbbr = books.length === 1 ? books[0].abbr : null;
     renderEventSummary();
     renderBookPicker();
@@ -621,7 +818,26 @@
   });
 
   function saveEntries(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    // Matches the main Minutes app's own real saving logic exactly, on Kevin's own
+    // direction, replacing this tool's previous, separate "autosave every 10 minutes"
+    // mechanism (a real, repeated file download) - the main app dropped that same idea
+    // already, and a periodic download prompt/notification popping up mid-singing on a
+    // phone specifically was the concern raised here. Saves to localStorage immediately,
+    // silently, every time an entry changes (already the case structurally, just not
+    // paired with any visible confirmation before now) - no timer, no popup, no file
+    // written until Download/Copy is actually tapped.
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      if(entries.length){
+        localSaveStatusEl.style.display = "block";
+        localSaveStatusEl.textContent = "Saved locally at " + new Date().toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"});
+        localSaveStatusEl.classList.remove("error");
+      }
+    }catch(e){
+      localSaveStatusEl.style.display = "block";
+      localSaveStatusEl.textContent = "Couldn't save to this browser \u2014 download or copy your log now to be safe.";
+      localSaveStatusEl.classList.add("error");
+    }
   }
 
   function renderEntries(){
@@ -673,16 +889,16 @@
     }
     // session row
     rows.push(["5", order++, "session", "", sessionId, "", ""].concat(commonFields()).concat(
-      ["", "", "", "", "", "", "", "", "", new Date().toISOString(), "", "", "", "", ""]));
+      ["", "", "", "", "", "", "", "", "", new Date().toISOString(), "", currentSeriesCode || "", currentEventId || "", currentPreviousEventId || "", ""]));
     entries.forEach(function(en){
       var ts = en.ts || new Date().toISOString();
       var timeEntered = new Date(ts).toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"});
       if(en.type === "marker"){
         rows.push(["5", order++, "marker", "", sessionId, "", ""].concat(commonFields()).concat(
-          ["", "", "", "", "", "", "", "", en.marker, ts, timeEntered, "", "", "", ""]));
+          ["", "", "", "", "", "", "", "", en.marker, ts, timeEntered, currentSeriesCode || "", currentEventId || "", currentPreviousEventId || "", ""]));
       } else {
         rows.push(["5", order++, "song", "", sessionId, "", ""].concat(commonFields()).concat(
-          [en.book, en.book, "", "", en.page, en.song, "", "", "", ts, timeEntered, "", "", "", ""]));
+          [en.book, en.book, "", "", en.page, en.song, "", "", "", ts, timeEntered, currentSeriesCode || "", currentEventId || "", currentPreviousEventId || "", ""]));
       }
     });
     return rows.map(function(r){ return r.map(csvCell).join(","); }).join("\r\n");
@@ -717,31 +933,6 @@
       });
     }
   });
-
-  // ---------------- Autosave ----------------
-
-  var AUTOSAVE_INTERVAL_MS = 10 * 60 * 1000;
-
-  function doAutosave(){
-    var snapshot = JSON.stringify(entries);
-    if(snapshot === lastAutosaveSnapshot) return;
-    if(entries.length === 0) return;
-    var now = new Date();
-    var timeBadge = String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0");
-    downloadCsv("-autosave-" + timeBadge);
-    lastAutosaveSnapshot = snapshot;
-    autosaveNote.textContent = "Last autosaved at " + now.toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}) + ".";
-  }
-
-  autosaveNowBtn.addEventListener("click", doAutosave);
-  autosaveCheckbox.addEventListener("change", function(){
-    if(autosaveCheckbox.checked){
-      autosaveTimer = setInterval(doAutosave, AUTOSAVE_INTERVAL_MS);
-    } else {
-      clearInterval(autosaveTimer);
-    }
-  });
-  autosaveTimer = setInterval(doAutosave, AUTOSAVE_INTERVAL_MS);
 
 })();
 </script>
