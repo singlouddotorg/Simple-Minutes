@@ -22,15 +22,37 @@
 
      Loads tunebook-library.js automatically from the Tunebook Registry's own real GitHub
      repo (the exact same file that repo uses, not a separate copy kept manually synced)
-     the moment this page opens, with a short timeout, and only falls back to the manual
-     file picker below if that fetch fails for any reason - no signal at the venue, a
-     blocked or slow connection, or an ad blocker/privacy extension flagging
-     raw.githubusercontent.com specifically (a real, known occurrence). Verified live
-     against the actual, current URL for the success path, an immediately-rejected fetch,
-     and a genuinely hung one that only resolves via the timeout - all three fall through
-     to the same, fully-working manual picker. Still no dependency on shared-utils.js or
-     any other file in the suite beyond this one fetch, so it still works fully offline
-     once loaded once, same as every other tool here.
+     the moment this page opens, with a short timeout. 2026-09-06c revised release-readiness
+     review, priority 4: relying on that fetch alone meant a phone with no signal at the
+     venue - including the very first time this tool was ever opened, before any successful
+     fetch had a chance to cache anything - reached only the manual file picker, with no
+     book anyone could select without going and finding a copy of tunebook-library.js
+     themselves. This package now ships its own copy of that same file
+     (tunebook-library.js, loaded as an ordinary <script> tag below, same as Minutes and
+     Tunebooks already do) purely as an offline fallback: the Registry fetch is still tried
+     first, since it may be more current, but a failed or timed-out fetch now falls back to
+     this bundled copy before ever reaching the manual picker, and only falls all the way
+     through to that picker if the bundled copy is somehow missing or invalid too. Verified
+     live against the actual, current URL for the success path, an immediately-rejected
+     fetch, and a genuinely hung one that only resolves via the timeout - all three now land
+     on the bundled Library rather than the picker. Still no dependency on shared-utils.js.
+
+     Security: the previous version of this file ran an auto-fetched or manually-selected
+     tunebook-library.js through new Function() before ever looking at its contents - the
+     same defect the v91 Tunebooks review found and fixed in that app (see
+     safelyExtractLibraryObject below, copied from there rather than re-derived, since a
+     security-relevant parser is exactly the kind of code that should exist in one
+     well-reviewed place, not two). Confirmed live before fixing: a file containing one
+     unrelated statement alongside a real, minimal Library object ran that statement, with
+     this page's own localStorage access and network ability, before the Library was even
+     returned - not data parsing, arbitrary code execution disguised as an import. Fixed by
+     treating the file as data, genuinely: find the real "const EZ_MINUTES_TUNEBOOK_LIBRARY
+     = { ... }" object-literal text and hand only that substring to JSON.parse(), which has
+     no code-execution capability of any kind. Also gates on the Library's own schemaVersion
+     (KNOWN_LIBRARY_SCHEMA_VERSIONS below) - a structural format version for
+     tunebook-library.js itself, unrelated to this suite's Schema 5 CSV format - so a future,
+     incompatible Library shape is refused with a clear message rather than silently
+     misread.
 
      Saving: matches the main Minutes app's own real approach exactly (silent, immediate
      localStorage persistence on every change, a passive "Saved locally at..." status
@@ -39,7 +61,69 @@
      on a timer. The main app dropped that same idea already; a periodic download
      prompt/notification popping up mid-singing on a phone specifically was the concern
      that settled it here too. Download/Copy stay as the real, standing export actions -
-     no file is ever written until one of those is actually tapped. -->
+     no file is ever written until one of those is actually tapped.
+
+     Clock: Kevin's own point, and a real asymmetry - at a laptop running the full Minutes
+     app the time is already on screen in the menu bar, but on a phone checking it means
+     leaving this app mid-number and coming back to the keypad. A secretary needs the time
+     for ordinary reasons (when the class recessed, when it resumed, what to write on a
+     marker afterwards), so it belongs here more than it ever did there. Placed on the
+     display box's own baseline row, to the right of the typed page number: that space was
+     empty even at three digits, so it costs zero vertical room on the screen where
+     vertical room is scarcest, and it's already where the eyes are. Set to the page
+     number's own size and weight, on its own baseline - the row has space to spare even at
+     four characters and a 12-hour time, so shrinking the clock only wasted it - with
+     hierarchy carried by ink instead: softer --ink-soft against the digits' near-black, so
+     a glance for the time never competes with the number being typed. Tabular figures and a
+     fixed flex basis, so neither the digits nor the keypad shift by a pixel as the minute
+     changes. Minutes
+     only, never seconds: singings are minuted to the minute, a ticking seconds digit is
+     motion in the one place that has to stay calm while someone types, and it repaints 60
+     times an hour instead of 3,600. 12- or 24-hour follows the device's own locale, the
+     same source the "Time entered" CSV column already uses, with the hour style resolved
+     per locale so a 24-hour phone reads 00:33 rather than 0:33. Re-ticks ON the minute
+     boundary rather than 60s from page load (a clock may not lag the real one), and
+     re-reads the real time on every return to visibility - phones throttle and suspend
+     timers in a backgrounded tab, and a clock that trusts only its own timer comes back
+     showing whatever time the screen went off at, which is worse than no clock because it
+     looks authoritative.
+
+     Break warnings: any number of expected break times can be set on Setup, and the clock
+     turns oxblood and pulses from five minutes before each one until two minutes after.
+     The point isn't an alarm, it's that a break shouldn't slip past while someone is
+     heads-down logging numbers, so the warning lives in the thing already on screen and
+     already being glanced at rather than adding anything new to the layout. The window is
+     COMPUTED from the real clock on every tick, never scheduled with a timer that has to
+     survive until it fires - which is exactly what makes it dependable on a phone: sleep
+     the screen at 10:20, wake it at 10:58, and the clock is already red, because nothing
+     had to be running in between. (This is also why the vibrate idea Kevin raised alongside
+     it was dropped rather than built: iOS Safari has no Vibration API at all, and even on
+     Android a buzz scheduled for 10:30 wouldn't fire at 10:30 with the phone asleep in a
+     pocket - the one moment it would be for. A real background alert needs a service
+     worker, which needs an http(s) origin, which breaks the double-click-a-file rule this
+     whole suite is built on. The phone's own alarm app already does vibrate-in-a-pocket
+     properly; what it can't do is know about this singing.) Tapping Break inside a warning
+     window ends that break's warning, since the warning's whole job was just done - two
+     more minutes of red at that exact moment is how people learn to ignore a signal. Break
+     times are Setup state and deliberately stay out of the CSV, the same reasoning the main
+     app applies to a song source that was selected but never used; what actually happened
+     is the RECESS marker, exported as always.
+
+     Keep the screen awake: an optional Screen Wake Lock, off by default because it costs
+     real battery and that has to be the phone owner's own choice. Without it the phone
+     sleeps after a minute or two and the break warning is only seen if someone happens to
+     wake the screen inside its seven-minute window, which makes it a coin toss rather than
+     a fixture. Requested on the tap that starts logging (a wake lock needs a real user
+     gesture), released when leaving the log screen, and re-requested on every return to
+     visibility - the system drops the lock whenever the page is hidden and does not restore
+     it, so a lock taken once quietly stops working for the rest of the singing. A browser
+     without the API gets a disabled toggle and a plain explanation rather than a switch
+     that silently does nothing. -->
+
+<!-- ANIMATION NOTE: the break pulse moves colour only, never size or position, so the time
+     stays readable at every point in the cycle and nothing on the screen shifts. Anyone who
+     has asked their device to reduce motion gets the same warning holding steady oxblood
+     instead - the colour is the signal, the movement only catches a glance. -->
 <style>
   :root{
     --paper:#fffdf8; --paper-dark:#f6f0e2; --ink:#241f1a; --ink-soft:#6b5f4d;
@@ -56,6 +140,21 @@
   label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:5px; }
   input[type="text"], input[type="date"]{ width:100%; font-family:var(--sans); font-size:16px; padding:11px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:14px; background:#fff; }
   .field:last-child input{ margin-bottom:0; }
+  /* Breaks: a row per expected break time, each removable. The phone's own time picker
+     does the entering, so there's no format to get wrong and nothing to validate. */
+  .break-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .break-row input[type="time"]{ flex:1 1 auto; min-width:0; font-family:var(--sans); font-size:16px;
+    padding:11px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); }
+  .break-row .remove-break{ flex:0 0 auto; background:none; border:none; color:var(--oxblood);
+    font-size:20px; line-height:1; padding:8px 10px; border-radius:8px; }
+  .break-note{ font-size:12px; color:var(--ink-soft); margin:2px 0 10px; line-height:1.4; }
+  .add-break{ display:block; width:100%; background:#fff; color:var(--oxblood); border:1px dashed var(--line);
+    border-radius:10px; padding:11px; font-size:14px; font-weight:600; margin-bottom:14px; }
+  .toggle-row{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .toggle-row input[type="checkbox"]{ width:20px; height:20px; margin:1px 0 0; flex:0 0 auto; accent-color:var(--oxblood); }
+  .toggle-row label{ text-transform:none; letter-spacing:0; font-size:14px; font-weight:600;
+    color:var(--ink); margin:0; line-height:1.3; }
+  #wakeLockNote{ font-size:12px; color:var(--ink-soft); margin:0 0 14px 30px; line-height:1.4; }
   button{ font-family:var(--sans); cursor:pointer; }
   .btn-primary{ display:block; width:100%; background:var(--oxblood); color:#fff; border:none; border-radius:10px; padding:16px; font-size:17px; font-weight:700; }
   .btn-primary:active{ background:var(--oxblood-dark); }
@@ -76,7 +175,46 @@
   .book-picker button{ flex:1 1 auto; min-width:100px; padding:14px 10px; border-radius:10px; border:none; font-size:15px; font-weight:700; }
   .active-book-badge{ display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:700; margin-bottom:10px; }
   .display-box{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; min-height:64px; }
-  .display-digits{ font-size:32px; font-weight:700; letter-spacing:2px; min-height:38px; }
+  /* The typed page number and the clock share one baseline row. The clock costs no
+     vertical space at all this way, and it sits in what was dead space to the right of a
+     3-digit page number - which is also exactly where the eyes already are while logging. */
+  .display-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .display-digits{ font-size:32px; font-weight:700; letter-spacing:2px; min-height:38px; flex:1 1 auto; min-width:0; }
+  /* Set to the page number's own size and weight, on its own baseline: there is negative
+     space to spare on this row even with a 4-character page and a 12-hour time, so making
+     the clock smaller only wasted it. Hierarchy comes from ink instead - the softer
+     --ink-soft against the digits' near-black - which separates the two well enough that a
+     glance for the time never competes with the number being typed, without giving up any
+     legibility at arm's length in a dim church. Tabular figures so the width can't shift as
+     the minute changes, and flex-shrink:0 so a long page number never squeezes it. */
+  .clock{ flex:0 0 auto; font-size:32px; font-weight:700; color:var(--ink-soft);
+          font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; letter-spacing:0.5px;
+          line-height:1; white-space:nowrap; }
+  /* The meridiem stays small deliberately - it's a suffix, not a digit, and at full size it
+     reads as part of the number and costs the room the digits just gained. */
+  .clock .meridiem{ font-size:14px; font-weight:700; margin-left:3px; color:var(--ink-faint); }
+  /* No small-screen exception: measured at 320px with the widest realistic pair this row
+     can hold - a 4-character page like "128t" against "12:34 AM" - the two still clear each
+     other by 42px with nothing overflowing, so the clock keeps the digits' full size at
+     every width rather than quietly shrinking on the phones that can least afford a
+     hard-to-read clock. */
+  /* Break warning. A slow breathing pulse between the two inks, not a strobe: it has to
+     catch the eye from across a pew without becoming something you want to look away from,
+     and it runs for seven minutes straight. The clock stays fully legible at every point
+     in the cycle - the animation moves colour only, never size or position, so nothing
+     shifts and the time is readable at any instant. */
+  .clock.break-soon, .clock.break-soon .meridiem{ color:var(--oxblood); }
+  .clock.break-soon{ animation:breakPulse 1.6s ease-in-out infinite; }
+  @keyframes breakPulse{
+    0%, 100%{ color:var(--oxblood); }
+    50%{ color:var(--ink-faint); }
+  }
+  /* Anyone who has asked their device to cut down on motion still gets the warning - it
+     just holds steady oxblood instead of pulsing. The colour is the signal; the movement
+     is only there to catch a glance. */
+  @media (prefers-reduced-motion:reduce){
+    .clock.break-soon{ animation:none; color:var(--oxblood); }
+  }
   .display-title{ font-size:14px; color:var(--ink-soft); margin-top:4px; min-height:18px; }
   .display-status{ font-size:12.5px; margin-top:4px; min-height:16px; }
   .display-status.warn{ color:var(--oxblood); font-weight:600; }
@@ -150,6 +288,18 @@
     <div id="bookSearchStatus"></div>
     <div id="bookSearchAmbiguous"></div>
     <button type="button" class="btn-secondary" id="bookSearchAddBtn" style="margin-bottom:14px;">Add source</button>
+
+    <label>Expected breaks (optional)</label>
+    <p class="break-note">The clock turns red and pulses from five minutes before each time until two minutes after, so a break doesn't slip past while you're heads-down logging.</p>
+    <div id="breakList"></div>
+    <button type="button" class="add-break" id="addBreakBtn">+ Add a break time</button>
+
+    <div class="toggle-row">
+      <input type="checkbox" id="wakeLockToggle">
+      <label for="wakeLockToggle">Keep the screen awake while logging</label>
+    </div>
+    <p id="wakeLockNote">Stops the phone sleeping mid-singing, so the clock and any break warning stay visible. Uses more battery.</p>
+
     <button type="button" class="btn-primary" id="doneSetupBtn">Done &mdash; start logging</button>
   </div>
 
@@ -162,7 +312,10 @@
     <div class="card">
       <div id="bookPickerWrap"></div>
       <div class="display-box">
-        <div class="display-digits" id="displayDigits">&nbsp;</div>
+        <div class="display-head">
+          <div class="display-digits" id="displayDigits">&nbsp;</div>
+          <div class="clock" id="clock" role="timer" aria-live="off" aria-label="Current time"></div>
+        </div>
         <div class="display-title" id="displayTitle"></div>
         <div class="display-status" id="displayStatus"></div>
       </div>
@@ -184,8 +337,18 @@
       <div id="localSaveStatus"></div>
     </div>
   </div>
+  <!-- Simple Minutes versions itself. It shared the suite's number while every app lived in
+       one repository, which was never quite honest - this app changes on its own schedule -
+       and is plainly wrong now that each is published separately. Shown rather than kept
+       internal for the same reason Minutes shows its own: this is the number someone reads
+       back when reporting that something misbehaved at a singing. -->
+  <p id="versionFooter" style="text-align:center;font-size:11px;color:var(--ink-faint);margin:14px 0 0;"></p>
 </div>
 
+<!-- Bundled purely as an offline fallback for the Registry fetch below (see the header
+     comment). Defines the global EZ_MINUTES_TUNEBOOK_LIBRARY the same way it does for
+     Minutes and Tunebooks; this app still prefers the live Registry copy when reachable. -->
+<script src="tunebook-library.js"></script>
 <script>
 (function(){
 
@@ -222,6 +385,16 @@
   var displayDigits = document.getElementById("displayDigits");
   var displayTitle = document.getElementById("displayTitle");
   var displayStatus = document.getElementById("displayStatus");
+  // Grouped with every other element lookup rather than left beside the code that uses
+  // them further down. A `var` assignment only happens where it physically sits, so an
+  // element grabbed late is undefined to anything that runs earlier - the exact shape of
+  // the escapeHtml bug found in the main app's Capture block during the v152 review, where
+  // restoring a sticky mode on load threw and took the rest of initialization with it.
+  var clockEl = document.getElementById("clock");
+  var breakList = document.getElementById("breakList");
+  var addBreakBtn = document.getElementById("addBreakBtn");
+  var wakeLockToggle = document.getElementById("wakeLockToggle");
+  var wakeLockNote = document.getElementById("wakeLockNote");
   var keypad = document.getElementById("keypad");
   var backspaceBtn = document.getElementById("backspaceBtn");
   var breakBtn = document.getElementById("breakBtn");
@@ -240,18 +413,75 @@
   var LIBRARY_FETCH_URL = "https://raw.githubusercontent.com/singlouddotorg/tunebook-registry/main/tunebook-library.js";
   var LIBRARY_FETCH_TIMEOUT_MS = 4000;
 
-  function proceedWithLibraryText(text, onFail){
-    var lib;
-    try{
-      lib = new Function(text + "\n;return (typeof EZ_MINUTES_TUNEBOOK_LIBRARY !== 'undefined') ? EZ_MINUTES_TUNEBOOK_LIBRARY : undefined;")();
-    }catch(e){
-      onFail("Couldn't read that as a tunebook-library.js file: " + e.message);
-      return;
+  // A structural format version for tunebook-library.js itself - distinct from this
+  // suite's Schema 5 CSV format, which has its own separate version. Kept as its own list,
+  // matching Tunebooks' KNOWN_LIBRARY_SCHEMA_VERSIONS, so both apps refuse the same future
+  // incompatible shape the same way rather than one silently misreading it.
+  var KNOWN_LIBRARY_SCHEMA_VERSIONS = ["1"];
+
+  function librarySchemaError(lib){
+    var v = lib && lib.schemaVersion;
+    if(KNOWN_LIBRARY_SCHEMA_VERSIONS.indexOf(String(v)) !== -1) return null;
+    var highestKnown = KNOWN_LIBRARY_SCHEMA_VERSIONS.reduce(function(max, k){ return Math.max(max, parseInt(k, 10) || 0); }, 0);
+    var vNum = parseInt(v, 10);
+    var isNewer = v && !isNaN(vNum) && vNum > highestKnown;
+    var shown = (v === undefined || v === null || v === "") ? "(none)" : JSON.stringify(v);
+    return isNewer
+      ? "This Tunebook Library uses schema " + v + ", but this version of Simple Minutes understands schema " + highestKnown + ". Update Simple Minutes, or use a compatible local Library."
+      : "This Tunebook Library's schemaVersion (" + shown + ") isn\u2019t one this build recognizes (expected " + highestKnown + ") \u2014 refusing to load it, since there\u2019s no way to know what it actually contains.";
+  }
+
+  // Copied verbatim from tunebooks.html's safelyExtractLibraryObject (v91 review, finding
+  // 2, MAJOR/security) rather than re-derived here. Treats the file as data, genuinely:
+  // finds the real "const EZ_MINUTES_TUNEBOOK_LIBRARY = { ... }" object-literal text -
+  // nothing else in the file is ever read - and hands only that substring to JSON.parse(),
+  // which has no code-execution capability of any kind. Works because this suite's own
+  // export writer only ever emits genuinely JSON-compatible values, aside from four known,
+  // fixed-template exceptions (schemaVersion as a variable reference, and the bare
+  // migrationIssues/works/editions keys) patched to valid JSON before parsing. A
+  // hand-edited file that doesn't fit this shape is rejected outright with a clear error,
+  // never silently executed.
+  function safelyExtractLibraryObject(text){
+    var marker = "const EZ_MINUTES_TUNEBOOK_LIBRARY = {";
+    var start = text.indexOf(marker);
+    if(start === -1) return { error: "Couldn't find \"const EZ_MINUTES_TUNEBOOK_LIBRARY = {\" in that file \u2014 is it really a tunebook-library.js?" };
+    var braceStart = start + marker.length - 1; // index of the opening {
+    var depth = 0, inString = false, stringChar = null, escaped = false;
+    for(var i = braceStart; i < text.length; i++){
+      var ch = text[i];
+      if(inString){
+        if(escaped){ escaped = false; }
+        else if(ch === "\\"){ escaped = true; }
+        else if(ch === stringChar){ inString = false; }
+        continue;
+      }
+      if(ch === '"' || ch === "'"){ inString = true; stringChar = ch; continue; }
+      if(ch === "{") depth++;
+      else if(ch === "}"){
+        depth--;
+        if(depth === 0){
+          var objText = text.slice(braceStart, i + 1);
+          var versionMatch = text.match(/const\s+EZ_MINUTES_TUNEBOOK_LIBRARY_VERSION\s*=\s*("(?:[^"\\]|\\.)*")\s*;/);
+          var patchedObjText = objText.replace(
+            /(\{|,)\s*schemaVersion\s*:\s*EZ_MINUTES_TUNEBOOK_LIBRARY_VERSION\s*(,|\})/,
+            function(full, before, after){ return before + '"schemaVersion":' + (versionMatch ? versionMatch[1] : "null") + after; }
+          );
+          ["migrationIssues", "works", "editions"].forEach(function(key){
+            var keyRe = new RegExp("(\\{|,)\\s*" + key + "\\s*:");
+            patchedObjText = patchedObjText.replace(keyRe, function(full, before){ return before + '"' + key + '":'; });
+          });
+          try{
+            return { value: JSON.parse(patchedObjText) };
+          }catch(parseErr){
+            return { error: "Found the Library object, but couldn't parse it as data: " + parseErr.message + ". This importer deliberately never executes an imported file as code \u2014 only genuine, JSON-compatible data is accepted." };
+          }
+        }
+      }
     }
-    if(!lib || !lib.editions){
-      onFail("That file loaded, but didn't define EZ_MINUTES_TUNEBOOK_LIBRARY with an editions object \u2014 is it really tunebook-library.js?");
-      return;
-    }
+    return { error: "The Library object in that file never closes properly \u2014 couldn't safely read it as data." };
+  }
+
+  function acceptLibrary(lib){
     libraryData = lib;
     autoLoadCard.style.display = "none";
     loadCard.style.display = "none";
@@ -274,9 +504,43 @@
     }
   }
 
+  function proceedWithLibraryText(text, onFail){
+    var result = safelyExtractLibraryObject(text);
+    if(result.error){
+      onFail(result.error);
+      return;
+    }
+    var lib = result.value;
+    if(!lib || !lib.editions){
+      onFail("That file loaded, but didn't define EZ_MINUTES_TUNEBOOK_LIBRARY with an editions object \u2014 is it really tunebook-library.js?");
+      return;
+    }
+    var schemaError = librarySchemaError(lib);
+    if(schemaError){
+      onFail(schemaError);
+      return;
+    }
+    acceptLibrary(lib);
+  }
+
   function showManualPicker(){
     autoLoadCard.style.display = "none";
     loadCard.style.display = "block";
+  }
+
+  // Offline fallback: the copy of tunebook-library.js bundled beside this file (loaded as
+  // an ordinary <script> tag, same trust level as this app's own code - not
+  // user-supplied, so it's used directly rather than re-parsed through
+  // safelyExtractLibraryObject, which exists to handle untrusted input). Used when the
+  // Registry fetch fails, times out, or comes back invalid - including the very first
+  // time this tool is ever opened with no signal at the venue at all.
+  function tryBundledLibrary(){
+    if(typeof EZ_MINUTES_TUNEBOOK_LIBRARY === "undefined" || !EZ_MINUTES_TUNEBOOK_LIBRARY || !EZ_MINUTES_TUNEBOOK_LIBRARY.editions){
+      return false;
+    }
+    if(librarySchemaError(EZ_MINUTES_TUNEBOOK_LIBRARY)) return false;
+    acceptLibrary(EZ_MINUTES_TUNEBOOK_LIBRARY);
+    return true;
   }
 
   // Automatic load on open, falling back to the manual picker below if it fails for any
@@ -291,24 +555,24 @@
     var timedOut = false;
     var timer = setTimeout(function(){
       timedOut = true;
-      showManualPicker();
+      if(!tryBundledLibrary()) showManualPicker();
     }, LIBRARY_FETCH_TIMEOUT_MS);
     fetch(LIBRARY_FETCH_URL).then(function(res){
       if(!res.ok) throw new Error("HTTP " + res.status);
       return res.text();
     }).then(function(text){
-      if(timedOut) return; // manual picker already shown, don't yank it away underneath them
+      if(timedOut) return; // fallback already shown, don't yank it away underneath them
       clearTimeout(timer);
       proceedWithLibraryText(text, function(){
-        // Auto-fetched content didn't actually parse as a real library - treat this the
-        // same as a network failure and fall back to the manual picker, rather than
+        // Auto-fetched content didn't actually parse as a real, current-schema library -
+        // fall back to the bundled copy next, same as a network failure, rather than
         // showing a confusing error about a file the person never chose themselves.
-        showManualPicker();
+        if(!tryBundledLibrary()) showManualPicker();
       });
     }).catch(function(){
       if(timedOut) return;
       clearTimeout(timer);
-      showManualPicker();
+      if(!tryBundledLibrary()) showManualPicker();
     });
   })();
 
@@ -516,6 +780,10 @@
       var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
       if(cb) cb.checked = true;
     });
+    breakTimes = Array.isArray(saved.breakTimes) ? saved.breakTimes.slice() : [];
+    breaksTaken = {};
+    if(wakeLockSupported) wakeLockToggle.checked = !!saved.keepAwake;
+    renderBreakList();
     try{ entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }catch(e){ entries = []; }
   }
 
@@ -528,6 +796,13 @@
     locationInput.value = "";
     dateInput.value = new Date().toISOString().slice(0,10);
     commonBookRow.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+    // Break times belong to the singing that just ended, not to the next one - a Tuesday
+    // night sing and a Saturday all-day don't break at the same hours. The wake-lock
+    // preference is about this phone rather than this singing, so that one stays.
+    breakTimes = [];
+    breaksTaken = {};
+    renderBreakList();
+    renderClock();
     currentSeriesCode = null; currentEventId = null; currentPreviousEventId = "";
   }
 
@@ -542,11 +817,13 @@
     books = selectedAbbrs.map(bookRecordFor);
     resolveSeriesFor(eventName, eventDate);
     logScreen.style.display = "block";
+    applyWakeLock();
     activeBookAbbr = books.length === 1 ? books[0].abbr : null;
     renderEventSummary();
     renderBookPicker();
     renderKeypad();
     renderDisplay();
+    renderClock();
     renderEntries();
   });
 
@@ -573,11 +850,19 @@
     clearSavedLog();
     logScreen.style.display = "none";
     setupCard.style.display = "block";
+    releaseWakeLock();
   });
 
+  // Break times and the wake-lock choice are saved here with the rest of Setup, and
+  // deliberately NOT written into the CSV: an expected break time is setup state for the
+  // day, not part of the historical record of what happened - the same reasoning the main
+  // app already applies to a song source that was selected but never used. What actually
+  // happened at a break is the Break marker itself, which is exported as it always was.
   function saveSetup(){
     localStorage.setItem(SETUP_KEY, JSON.stringify({
-      event: eventName, date: eventDate, location: eventLocation, selectedAbbrs: selectedAbbrs
+      event: eventName, date: eventDate, location: eventLocation, selectedAbbrs: selectedAbbrs,
+      breakTimes: breakTimes.filter(function(t){ return parseBreakTime(t) !== null; }),
+      keepAwake: !!(wakeLockToggle && wakeLockToggle.checked)
     }));
   }
 
@@ -635,20 +920,242 @@
     }
     books = selectedAbbrs.map(bookRecordFor);
     resolveSeriesFor(eventName, eventDate);
+    // Drop any row left blank because someone tapped "+ Add a break time" and then thought
+    // better of it - an empty row is an abandoned intention, not a break at midnight.
+    breakTimes = breakTimes.filter(function(t){ return parseBreakTime(t) !== null; });
+    breaksTaken = {};
+    renderBreakList();
     saveSetup();
     setupCard.style.display = "none";
     logScreen.style.display = "block";
+    // Requested here, on the tap that starts logging: a wake lock needs the page visible
+    // and a real user gesture behind it, and this is that gesture.
+    applyWakeLock();
     activeBookAbbr = books.length === 1 ? books[0].abbr : null;
     renderEventSummary();
     renderBookPicker();
     renderKeypad();
     renderDisplay();
+    renderClock();
     renderEntries();
   });
 
   editSetupLink.addEventListener("click", function(){
     logScreen.style.display = "none";
     setupCard.style.display = "block";
+    // Nothing to keep awake on the Setup screen, and holding the lock there would keep the
+    // phone lit while it sits forgotten on a pew.
+    releaseWakeLock();
+  });
+
+  // ---------------- Clock ----------------
+  // A phone in a singing is face-down on a pew or in a hand, and the secretary needs the
+  // time for real reasons - when the class recessed, when it came back, what to write on a
+  // marker later - which on a laptop is answered by just glancing at the menu bar. On a
+  // phone, checking means leaving the app, and coming back to a keypad mid-number.
+  //
+  // Minutes only, never seconds: a singing is minuted to the minute, and a seconds digit
+  // ticking beside the page number is motion in the one place that has to stay calm while
+  // someone is typing. That also means this repaints 60 times an hour instead of 3,600.
+  //
+  // 12- or 24-hour, and the separator, come from the device's own locale exactly as the
+  // "Time entered" CSV column already does (toLocaleTimeString) - not a second, separate
+  // idea of what a time looks like, and no setting to get wrong.
+  var clockTimer = null;
+
+  // A 12-hour locale wants "9:05 AM", never "09:05 AM"; a 24-hour one wants "09:05" and
+  // "00:33", never "9:05" and "0:33". One hour option can't be right for both, so ask the
+  // locale which clock it is and pick accordingly - resolved once, since it can't change
+  // while the page is open. Falls back to the 12-hour shape if a browser doesn't report it.
+  var CLOCK_HOUR_STYLE = (function(){
+    try{
+      var resolved = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).resolvedOptions();
+      return resolved.hour12 === false ? "2-digit" : "numeric";
+    }catch(e){ return "numeric"; }
+  })();
+
+  // ---------------- Break warnings ----------------
+  // Kevin's own framing: the point isn't an alarm, it's that a break shouldn't slip past
+  // while you're heads-down logging song numbers. So the warning lives in the thing that's
+  // already on screen and already being glanced at - the clock turns oxblood and pulses.
+  //
+  // The window is computed from the real clock every tick rather than scheduled with a
+  // timer that has to survive until it fires. That distinction is the whole reason this is
+  // dependable on a phone: put the screen to sleep at 10:20, wake it at 10:58, and the
+  // clock is already red, because nothing had to be running in between. A scheduled alert
+  // would simply have been lost (and is the reason the vibrate idea was dropped).
+  var BREAK_LEAD_MIN = 5;    // starts warning this long before
+  var BREAK_TRAIL_MIN = 2;   // and keeps warning this long after
+  var breakTimes = [];       // ["10:30", "12:15"], as typed into the phone's time picker
+  var breaksTaken = {};      // "10:30" -> true, once a Break was actually logged in its window
+
+  function parseBreakTime(hhmm){
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "").trim());
+    if(!m) return null;
+    var h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+    if(h > 23 || min > 59) return null;
+    return h * 60 + min;
+  }
+
+  // Which break, if any, is currently inside its warning window. Compared in minutes since
+  // midnight against the local clock, so no date arithmetic and nothing to get wrong across
+  // a timezone the phone might change under us mid-singing.
+  function activeBreakWarning(now){
+    now = now || new Date();
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    for(var i = 0; i < breakTimes.length; i++){
+      var t = parseBreakTime(breakTimes[i]);
+      if(t === null) continue;
+      if(breaksTaken[breakTimes[i]]) continue;
+      if(nowMin >= t - BREAK_LEAD_MIN && nowMin <= t + BREAK_TRAIL_MIN) return breakTimes[i];
+    }
+    return null;
+  }
+
+  function renderClock(){
+    var now = new Date();
+    // Recomputed on every tick, and on every return to visibility, alongside the time
+    // itself - one source of truth, one moment, no chance of the colour and the digits
+    // disagreeing about what time it is.
+    clockEl.classList.toggle("break-soon", activeBreakWarning(now) !== null);
+    var text = now.toLocaleTimeString(undefined, { hour: CLOCK_HOUR_STYLE, minute: "2-digit" });
+    // Most locales that use one put AM/PM at the end; split it off so it can be set smaller
+    // without the digits themselves shrinking. Anything unexpected is printed verbatim
+    // rather than guessed at - a locale that puts its marker first, or uses none at all,
+    // still gets a correct, complete time.
+    var m = /^(.*?)\s*([AaPp]\.?[Mm]\.?)$/.exec(text);
+    if(m){
+      clockEl.textContent = m[1];
+      var span = document.createElement("span");
+      span.className = "meridiem";
+      span.textContent = m[2];
+      clockEl.appendChild(span);
+    } else {
+      clockEl.textContent = text;
+    }
+  }
+
+  // Re-ticks ON the minute boundary rather than every 60,000ms from whenever the page
+  // happened to load - otherwise the displayed minute lags the real one by up to a minute,
+  // which is the one thing a clock may not do. Rescheduled fresh each tick, so it also
+  // can't drift.
+  function scheduleClock(){
+    if(clockTimer) clearTimeout(clockTimer);
+    renderClock();
+    var now = new Date();
+    var msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    clockTimer = setTimeout(scheduleClock, Math.max(250, msToNextMinute));
+  }
+
+  // Phones aggressively throttle or suspend timers in a backgrounded tab, so a clock that
+  // only trusts its own timer comes back showing whatever time it was when the screen went
+  // off - worse than no clock, because it looks authoritative. Re-read the real clock on
+  // every return to visibility (and on focus, for a desktop browser), and reschedule from
+  // there. Confirmed live by suspending and resuming the page.
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) scheduleClock();
+  });
+  window.addEventListener("focus", scheduleClock);
+  window.addEventListener("pageshow", scheduleClock);
+  scheduleClock();
+
+  // ---------------- Break times (Setup) ----------------
+  // Rendered from breakTimes rather than read back out of the DOM, so the array is always
+  // the truth and a half-typed row can't become one.
+  function renderBreakList(){
+    breakList.innerHTML = "";
+    breakTimes.forEach(function(value, idx){
+      var row = document.createElement("div");
+      row.className = "break-row";
+
+      var input = document.createElement("input");
+      input.type = "time";
+      input.value = value;
+      input.setAttribute("aria-label", "Break time " + (idx + 1));
+      input.addEventListener("change", function(){
+        breakTimes[idx] = input.value;
+        // A time that's been changed is a different break from the one that may already
+        // have been marked taken, so let it warn again.
+        breaksTaken = {};
+        saveSetup();
+        renderClock();
+      });
+
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "remove-break";
+      remove.innerHTML = "&times;";
+      remove.setAttribute("aria-label", "Remove this break time");
+      remove.addEventListener("click", function(){
+        breakTimes.splice(idx, 1);
+        saveSetup();
+        renderBreakList();
+        renderClock();
+      });
+
+      row.appendChild(input);
+      row.appendChild(remove);
+      breakList.appendChild(row);
+    });
+  }
+
+  addBreakBtn.addEventListener("click", function(){
+    breakTimes.push("");
+    renderBreakList();
+    // Open the phone's own time picker straight away - adding a row and then having to tap
+    // it is two taps for one intention.
+    var inputs = breakList.querySelectorAll('input[type="time"]');
+    var last = inputs[inputs.length - 1];
+    if(last){ last.focus(); if(typeof last.showPicker === "function"){ try{ last.showPicker(); }catch(e){} } }
+  });
+
+  // ---------------- Keep the screen awake ----------------
+  // Without this the phone sleeps after a minute or two and the break warning is only seen
+  // if someone happens to wake the screen inside its seven-minute window - which makes the
+  // warning a coin toss rather than a fixture. Off by default: it costs real battery, and
+  // that has to be a deliberate choice made by the person whose phone it is.
+  var wakeLockSupported = ("wakeLock" in navigator) && navigator.wakeLock && typeof navigator.wakeLock.request === "function";
+  var wakeLockSentinel = null;
+
+  if(!wakeLockSupported){
+    // Say so plainly rather than offering a switch that silently does nothing. The rest of
+    // the app is unaffected - this only ever kept the screen on.
+    wakeLockToggle.disabled = true;
+    wakeLockToggle.checked = false;
+    wakeLockNote.textContent = "This browser can't keep the screen awake, so the phone's own display timeout applies. Everything else works normally.";
+  }
+
+  function releaseWakeLock(){
+    if(wakeLockSentinel){
+      try{ wakeLockSentinel.release(); }catch(e){}
+      wakeLockSentinel = null;
+    }
+  }
+
+  // A wake lock is dropped by the system whenever the page stops being visible, and is NOT
+  // restored on its own when you come back - so this is re-requested on every return to
+  // visibility, the same way the clock re-reads the real time. Requesting needs the page
+  // visible and can reject (low battery, a policy, an older implementation); a rejection is
+  // not worth interrupting a singing over, so it fails quietly and the phone simply sleeps
+  // as it normally would.
+  function applyWakeLock(){
+    if(!wakeLockSupported) return;
+    var wanted = wakeLockToggle.checked && logScreen.style.display === "block" && !document.hidden;
+    if(!wanted){ releaseWakeLock(); return; }
+    if(wakeLockSentinel) return;
+    navigator.wakeLock.request("screen").then(function(sentinel){
+      wakeLockSentinel = sentinel;
+      sentinel.addEventListener("release", function(){ wakeLockSentinel = null; });
+    }).catch(function(){ wakeLockSentinel = null; });
+  }
+
+  wakeLockToggle.addEventListener("change", function(){
+    saveSetup();
+    applyWakeLock();
+  });
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden) wakeLockSentinel = null; // already released by the system
+    else applyWakeLock();
   });
 
   function renderEventSummary(){
@@ -810,6 +1317,13 @@
 
   breakBtn.addEventListener("click", function(){
     entries.push({ type: "marker", marker: "RECESS", ts: new Date().toISOString() });
+    // The warning's whole job was to stop this break slipping past. It just didn't, so the
+    // clock stops shouting - otherwise it would keep pulsing red for two more minutes at
+    // exactly the moment the secretary has already done the thing, which teaches people to
+    // ignore it. Only the break whose window we're actually in is marked; the rest of the
+    // day's breaks are untouched.
+    var warning = activeBreakWarning();
+    if(warning){ breaksTaken[warning] = true; renderClock(); }
     typed = "";
     pendingUnrecognized = false;
     saveEntries();
@@ -865,6 +1379,20 @@
       }
       recentList.appendChild(row);
     });
+  }
+
+  // Declared here, in the app's own file, rather than a separate version file like
+  // Minutes has - this app still loads no *code* dependency but itself (tunebook-library.js,
+  // added below, is data, read as such, never as a version-carrying script).
+  // 1.1.0: 2026-09-06c revised release-readiness review - the Library loader no longer
+  // executes an imported file as code, rejects a Library schema it doesn't recognize, and
+  // falls back to a bundled copy of tunebook-library.js before ever reaching the manual
+  // picker, so the app now works the first time it's ever opened with no signal at all.
+  var SIMPLE_MINUTES_VERSION = "1.1.0";
+  var versionFooterEl = document.getElementById("versionFooter");
+  if(versionFooterEl){
+    versionFooterEl.textContent = "Simple Minutes \u00b7 Version " + SIMPLE_MINUTES_VERSION +
+      " \u00b7 Schema " + "5";
   }
 
   // ---------------- Export ----------------
