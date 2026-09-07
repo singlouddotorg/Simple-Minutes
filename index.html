@@ -129,13 +129,19 @@
     --paper:#fffdf8; --paper-dark:#f6f0e2; --ink:#241f1a; --ink-soft:#6b5f4d;
     --ink-faint:#a89a80; --oxblood:#8a2e2e; --oxblood-dark:#6e2424; --line:#e1d5b8;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --serif: 'Spectral', Georgia, serif;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html, body{ margin:0; padding:0; background:var(--paper-dark); color:var(--ink); font-family:var(--sans); }
   body{ min-height:100vh; padding-bottom:24px; }
   .wrap{ max-width:480px; margin:0 auto; padding:16px; }
-  h1{ font-size:20px; margin:0 0 4px; }
-  .sub{ color:var(--ink-soft); font-size:13px; margin:0 0 18px; line-height:1.4; }
+  /* Same brand mark as the rest of the suite (Minutes' rail, the Registry's header): the
+     four shapes plus the serif wordmark, so Simple Minutes reads as part of the family
+     rather than a standalone tool. Colored with this app's own --oxblood, matching the
+     Registry's light-background header rather than Minutes' gold-on-dark rail. */
+  .suite-brand{ display:flex; align-items:center; gap:8px; margin-bottom:18px; }
+  .suite-brand .shapes{ display:flex; gap:5px; }
+  .suite-brand h1{ font-family:var(--serif); font-weight:600; font-size:20px; letter-spacing:.01em; margin:0; }
   .card{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
   label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:5px; }
   input[type="text"], input[type="date"]{ width:100%; font-family:var(--sans); font-size:16px; padding:11px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:14px; background:#fff; }
@@ -247,8 +253,15 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Simple Minutes</h1>
-  <p class="sub">A phone-friendly logger for a regular sing &mdash; page numbers only, no names. Everything stays on this device until you export it.</p>
+  <div class="suite-brand">
+    <span class="shapes" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><polygon points="12,3 21,20 3,20"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><rect x="4" y="4" width="16" height="16"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><polygon points="12,2 22,12 12,22 2,12"/></svg>
+    </span>
+    <h1>Simple Minutes</h1>
+  </div>
 
   <div class="card" id="autoLoadCard" style="display:none; text-align:center; color:var(--ink-soft); font-size:14px;">Loading song sources&hellip;</div>
 
