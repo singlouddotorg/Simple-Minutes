@@ -10,16 +10,16 @@ One HTML file, plus a bundled copy of the shared tunebook library for guaranteed
 
 | App | What it does |
 |---|---|
-| [**Minutes**](../../../minutes) | Log a singing as it happens, then turn that log into publishable minutes. |
-| [**Tunebooks**](../../../tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. |
-| [**Simple Minutes**](../../../simple-minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. |
-| [**Tunebook Registry**](../../../tunebook-registry) | The published tunebook data the others read. |
+| [**Minutes**](https://github.com/singlouddotorg/minutes) | Log a singing as it happens, then turn that log into publishable minutes. |
+| [**Tunebooks**](https://github.com/singlouddotorg/tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. |
+| [**Simple Minutes**](https://github.com/singlouddotorg/simple-minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. |
+| [**Tunebook Registry**](https://github.com/singlouddotorg/tunebook-registry) | The published tunebook data the others read. |
 
 ## What it is for
 
 The deliberately narrow case: a weeknight sing where somebody wants a record of what was
 sung, and nobody is going to type names into a phone all evening. It writes a real
-[Schema 5](../../../minutes/blob/main/SCHEMA-5.md) Singing Record — the same format the full
+[Schema 5](https://github.com/singlouddotorg/minutes/blob/main/SCHEMA-5.md) Singing Record — the same format the full
 Minutes app uses — so a night's log opens straight into Minutes for compiling into
 publishable minutes.
 
@@ -44,7 +44,7 @@ check it without leaving the app.
 ## Where the songbook data comes from
 
 On opening, the app first tries fetching `tunebook-library.js` from the
-[Tunebook Registry](../../../tunebook-registry), so it has the current book list when a
+[Tunebook Registry](https://github.com/singlouddotorg/tunebook-registry), so it has the current book list when a
 connection is available. If that fails for any reason — no signal at the venue, a blocked
 connection, a privacy extension, or simply the very first time this tool is ever opened —
 it falls back to the copy of `tunebook-library.js` bundled right beside `index.html`, with
