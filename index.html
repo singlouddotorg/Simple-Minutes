@@ -174,6 +174,18 @@
   #bookSearchStatus{ font-size:12px; color:var(--oxblood); margin:-8px 0 12px; }
   #bookSearchAmbiguous{ display:none; flex-wrap:wrap; gap:6px; margin:-8px 0 12px; }
   #bookSearchAmbiguous button{ font-size:12px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; }
+  /* Live results as you type. Built by hand rather than left to <input list>/<datalist> -
+     iOS Safari (this app's main audience) doesn't render a datalist's suggestions at all,
+     which is what made the field look like it wasn't searching anything. */
+  #bookSearchResults{ display:none; flex-direction:column; margin:-8px 0 12px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  #bookSearchResults button{ text-align:left; font-size:14px; padding:11px 12px; border:none; border-bottom:1px solid var(--line); background:#fff; color:var(--ink); }
+  #bookSearchResults button:last-child{ border-bottom:none; }
+  #bookSearchResults button:active{ background:var(--paper); }
+  /* A book added by search or typed as a custom source has no checkbox to show it's been
+     picked - unlike the common books above, it wasn't on-screen at all until just now - so
+     it needs its own confirmation, or adding one would look like it did nothing. */
+  #bookSearchAddedRow .remove-added{ flex:0 0 auto; background:none; border:none; color:var(--oxblood);
+    font-size:20px; line-height:1; padding:8px 10px; border-radius:8px; }
 
   /* Logging screen */
   #logScreen{ display:none; }
@@ -211,6 +223,11 @@
      shifts and the time is readable at any instant. */
   .clock.break-soon, .clock.break-soon .meridiem{ color:var(--oxblood); }
   .clock.break-soon{ animation:breakPulse 1.6s ease-in-out infinite; }
+  /* In the minute right before and right after the break itself, the pulse triples in
+     speed - still the same colour swing, just urgent about it, since this is the window
+     where "get up now" actually matters. Same rule, later in the sheet, so it wins over
+     the slower pulse above whenever both classes are on the clock at once. */
+  .clock.break-imminent{ animation:breakPulse 0.53s ease-in-out infinite; }
   @keyframes breakPulse{
     0%, 100%{ color:var(--oxblood); }
     50%{ color:var(--ink-faint); }
@@ -219,7 +236,7 @@
      just holds steady oxblood instead of pulsing. The colour is the signal; the movement
      is only there to catch a glance. */
   @media (prefers-reduced-motion:reduce){
-    .clock.break-soon{ animation:none; color:var(--oxblood); }
+    .clock.break-soon, .clock.break-imminent{ animation:none; color:var(--oxblood); }
   }
   .display-title{ font-size:14px; color:var(--ink-soft); margin-top:4px; min-height:18px; }
   .display-status{ font-size:12.5px; margin-top:4px; min-height:16px; }
@@ -295,12 +312,13 @@
     <div class="book-check-row" id="commonBookRow"></div>
     <div class="field">
       <label for="bookSearchInput">Search for another book</label>
-      <input type="text" id="bookSearchInput" placeholder="Type a book name&hellip;" list="bookSearchOptions">
-      <datalist id="bookSearchOptions"></datalist>
+      <input type="text" id="bookSearchInput" placeholder="Type a book name, or a custom source like Christmas Song Packet" autocomplete="off">
     </div>
+    <div id="bookSearchResults"></div>
     <div id="bookSearchStatus"></div>
     <div id="bookSearchAmbiguous"></div>
     <button type="button" class="btn-secondary" id="bookSearchAddBtn" style="margin-bottom:14px;">Add source</button>
+    <div class="book-check-row" id="bookSearchAddedRow"></div>
 
     <label>Expected breaks (optional)</label>
     <p class="break-note">The clock turns red and pulses from five minutes before each time until two minutes after, so a break doesn't slip past while you're heads-down logging.</p>
@@ -387,10 +405,11 @@
   var locationInput = document.getElementById("locationInput");
   var commonBookRow = document.getElementById("commonBookRow");
   var bookSearchInput = document.getElementById("bookSearchInput");
-  var bookSearchOptions = document.getElementById("bookSearchOptions");
+  var bookSearchResults = document.getElementById("bookSearchResults");
   var bookSearchStatus = document.getElementById("bookSearchStatus");
   var bookSearchAmbiguous = document.getElementById("bookSearchAmbiguous");
   var bookSearchAddBtn = document.getElementById("bookSearchAddBtn");
+  var bookSearchAddedRow = document.getElementById("bookSearchAddedRow");
   var doneSetupBtn = document.getElementById("doneSetupBtn");
   var eventSummary = document.getElementById("eventSummary");
   var editSetupLink = document.getElementById("editSetupLink");
@@ -499,7 +518,6 @@
     autoLoadCard.style.display = "none";
     loadCard.style.display = "none";
     renderCommonBooks();
-    renderBookSearchOptions();
     // v146 addition: reopening this after a completed sing used to silently restore
     // last time's event/date/entries with no indication anything was restored at all -
     // a genuine data-corruption risk for the tool's own stated, recurring use case (the
@@ -665,19 +683,59 @@
     });
   }
 
-  function renderBookSearchOptions(){
-    var master = (typeof EZ_MINUTES_MASTER_TUNEBOOK_LIST !== "undefined" && EZ_MINUTES_MASTER_TUNEBOOK_LIST.books) || {};
-    bookSearchOptions.innerHTML = "";
-    Object.keys(master).forEach(function(code){
-      var b = master[code];
-      if(!b.editionCode && !b.editionId) return; // exclude bare Work records, no real Edition to pick
-      var name = b.commonName || b.fullTitle;
+  // Every edition worth finding this way is right here in the bundled Library - editions
+  // marked "common" already have their own checkbox above, so this searches the rest: every
+  // edition marked "search" (the whole reason that visibility value exists), by substring
+  // match against its common name, its title, its parent Work's title, and its own code.
+  function searchKnownBooks(typedName){
+    var q = String(typedName || "").trim().toLowerCase();
+    if(!q) return [];
+    var results = [];
+    Object.values(libraryData.editions).forEach(function(e){
+      if(e.ezMinutesVisibility !== "search") return;
+      if(selectedAbbrs.indexOf(e.editionCode) !== -1) return; // already picked, don't suggest it again
+      var name = e.commonName || e.titleProper || "";
       if(!name) return;
-      var opt = document.createElement("option");
-      opt.value = name;
-      bookSearchOptions.appendChild(opt);
+      var work = libraryData.works && libraryData.works[e.workId];
+      var workName = (work && work.titleProper) || "";
+      var code = e.editionCode || "";
+      var hit = name.toLowerCase().indexOf(q) !== -1 ||
+                workName.toLowerCase().indexOf(q) !== -1 ||
+                code.toLowerCase().indexOf(q) !== -1;
+      if(!hit) return;
+      results.push({ abbr: code, name: name, publicationYear: e.publicationYear });
     });
+    results.sort(function(a, b){ return a.name.localeCompare(b.name); });
+    return results.slice(0, 8);
   }
+
+  function renderBookSearchResults(){
+    var results = searchKnownBooks(bookSearchInput.value);
+    bookSearchResults.innerHTML = "";
+    if(!results.length){
+      bookSearchResults.style.display = "none";
+      return;
+    }
+    results.forEach(function(r){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      // Some common names already end in their own "(year)" (e.g. "Kentucky Harmonist
+      // (1818)") - only append the edition's year when the name doesn't already show it.
+      var showYear = r.publicationYear && r.name.indexOf("(" + r.publicationYear + ")") === -1;
+      btn.textContent = r.name + (showYear ? " (" + r.publicationYear + ")" : "");
+      btn.addEventListener("click", function(){
+        addSelectedAbbr(r.abbr);
+        bookSearchInput.value = "";
+        bookSearchResults.style.display = "none";
+        bookSearchResults.innerHTML = "";
+        bookSearchStatus.textContent = "";
+      });
+      bookSearchResults.appendChild(btn);
+    });
+    bookSearchResults.style.display = "flex";
+  }
+
+  bookSearchInput.addEventListener("input", renderBookSearchResults);
 
   function findRealBookByTypedName(typedName){
     var q = typedName.trim().toLowerCase();
@@ -688,15 +746,16 @@
     });
     if(indexed) return { abbr: indexed.editionCode };
 
-    var master = (typeof EZ_MINUTES_MASTER_TUNEBOOK_LIST !== "undefined" && EZ_MINUTES_MASTER_TUNEBOOK_LIST.books) || {};
+    // No exact match on any one edition's own name or code - but the typed text might still
+    // be a Work's title shared by more than one edition of it (e.g. "Sacred Harp" naming
+    // both the '91 and '25 books), which the checkbox row and the live results above won't
+    // resolve on their own. Offer every edition of that Work explicitly.
     var matches = [];
-    Object.keys(master).forEach(function(code){
-      var b = master[code];
-      if(!b.editionCode && !b.editionId) return;
-      var name = (b.commonName || b.fullTitle || "").toLowerCase();
-      var workName = (b.workTitleProper || "").toLowerCase();
-      if(name === q || code.toLowerCase() === q || workName === q){
-        matches.push({ abbr: code, name: b.commonName || b.fullTitle, publicationYear: b.publicationYear });
+    Object.values(libraryData.editions).forEach(function(e){
+      var work = libraryData.works && libraryData.works[e.workId];
+      var workName = (work && work.titleProper || "").toLowerCase();
+      if(workName && workName === q){
+        matches.push({ abbr: e.editionCode, name: e.commonName || e.titleProper, publicationYear: e.publicationYear });
       }
     });
     if(matches.length === 1) return matches[0];
@@ -729,6 +788,8 @@
     var match = findRealBookByTypedName(typedName);
     bookSearchAmbiguous.style.display = "none";
     bookSearchAmbiguous.innerHTML = "";
+    bookSearchResults.style.display = "none";
+    bookSearchResults.innerHTML = "";
     if(match && match.ambiguous){
       bookSearchStatus.textContent = '"' + typedName.trim() + '" matches ' + match.matches.length + ' real editions \u2014 choose the one actually used:';
       renderAmbiguousChoices(match.matches, function(abbr){
@@ -744,7 +805,32 @@
       bookSearchStatus.textContent = "";
       return;
     }
-    // Not a recognized book at all - add as a genuinely custom source
+    // No exact match on the full name or code - but if what's typed is a partial title
+    // that the live search above narrowed to exactly one real edition, tapping Add should
+    // still take that edition rather than falling through to a bogus custom source that
+    // duplicates a book already in the Library under a slightly different spelling.
+    var partial = searchKnownBooks(typedName);
+    if(partial.length === 1){
+      addSelectedAbbr(partial[0].abbr);
+      bookSearchInput.value = "";
+      bookSearchStatus.textContent = "";
+      bookSearchResults.style.display = "none";
+      bookSearchResults.innerHTML = "";
+      return;
+    }
+    if(partial.length > 1){
+      bookSearchStatus.textContent = '"' + typedName.trim() + '" matches more than one book — tap the one actually used:';
+      renderAmbiguousChoices(partial, function(abbr){
+        addSelectedAbbr(abbr);
+        bookSearchInput.value = "";
+        bookSearchStatus.textContent = "";
+        bookSearchResults.style.display = "none";
+        bookSearchResults.innerHTML = "";
+      });
+      return;
+    }
+    // Not a recognized book at all - add as a genuinely custom source (a Christmas packet,
+    // a photocopy, anything with no entry in the Library)
     addSelectedAbbr(typedName.trim());
     bookSearchInput.value = "";
     bookSearchStatus.textContent = "";
@@ -754,9 +840,42 @@
     if(selectedAbbrs.indexOf(abbr) === -1) selectedAbbrs.push(abbr);
     var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
     if(cb) cb.checked = true;
+    renderBookSearchAdded();
   }
   function removeSelectedAbbr(abbr){
     selectedAbbrs = selectedAbbrs.filter(function(a){ return a !== abbr; });
+    renderBookSearchAdded();
+  }
+
+  // Anything added through the search box or typed as a custom source has no checkbox up
+  // in the common row to show it "took" - it wasn't on-screen before the search at all - so
+  // it gets listed here instead, the same swatch-plus-name look, with its own way to undo.
+  function renderBookSearchAdded(){
+    bookSearchAddedRow.innerHTML = "";
+    selectedAbbrs.forEach(function(abbr){
+      if(commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]')) return; // already shown, checked, above
+      var rec = bookRecordFor(abbr);
+      var row = document.createElement("div");
+      row.className = "book-check-item";
+      var swatch = document.createElement("span");
+      swatch.className = "swatch";
+      swatch.style.background = rec.badgeColor;
+      swatch.style.color = rec.badgeTextColor;
+      swatch.textContent = rec.abbr;
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = rec.name;
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "remove-added";
+      removeBtn.setAttribute("aria-label", "Remove " + rec.name);
+      removeBtn.textContent = "×";
+      removeBtn.addEventListener("click", function(){ removeSelectedAbbr(abbr); });
+      row.appendChild(swatch);
+      row.appendChild(name);
+      row.appendChild(removeBtn);
+      bookSearchAddedRow.appendChild(row);
+    });
   }
 
   var resumeCard = document.getElementById("resumeCard");
@@ -793,6 +912,7 @@
       var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
       if(cb) cb.checked = true;
     });
+    renderBookSearchAdded();
     breakTimes = Array.isArray(saved.breakTimes) ? saved.breakTimes.slice() : [];
     breaksTaken = {};
     if(wakeLockSupported) wakeLockToggle.checked = !!saved.keepAwake;
@@ -809,6 +929,7 @@
     locationInput.value = "";
     dateInput.value = new Date().toISOString().slice(0,10);
     commonBookRow.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+    renderBookSearchAdded();
     // Break times belong to the singing that just ended, not to the next one - a Tuesday
     // night sing and a Saturday all-day don't break at the same hours. The wake-lock
     // preference is about this phone rather than this singing, so that one stays.
@@ -999,6 +1120,7 @@
   // would simply have been lost (and is the reason the vibrate idea was dropped).
   var BREAK_LEAD_MIN = 5;    // starts warning this long before
   var BREAK_TRAIL_MIN = 2;   // and keeps warning this long after
+  var BREAK_IMMINENT_MIN = 1; // inside this much of the break itself, the pulse triples
   var breakTimes = [];       // ["10:30", "12:15"], as typed into the phone's time picker
   var breaksTaken = {};      // "10:30" -> true, once a Break was actually logged in its window
 
@@ -1025,12 +1147,27 @@
     return null;
   }
 
+  // True for the minute immediately before the break and the minute immediately after it -
+  // the narrower window inside the broader warning where the pulse should triple in speed.
+  function isBreakImminent(now){
+    now = now || new Date();
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    for(var i = 0; i < breakTimes.length; i++){
+      var t = parseBreakTime(breakTimes[i]);
+      if(t === null) continue;
+      if(breaksTaken[breakTimes[i]]) continue;
+      if(nowMin >= t - BREAK_IMMINENT_MIN && nowMin <= t + BREAK_IMMINENT_MIN) return true;
+    }
+    return false;
+  }
+
   function renderClock(){
     var now = new Date();
     // Recomputed on every tick, and on every return to visibility, alongside the time
     // itself - one source of truth, one moment, no chance of the colour and the digits
     // disagreeing about what time it is.
     clockEl.classList.toggle("break-soon", activeBreakWarning(now) !== null);
+    clockEl.classList.toggle("break-imminent", isBreakImminent(now));
     var text = now.toLocaleTimeString(undefined, { hour: CLOCK_HOUR_STYLE, minute: "2-digit" });
     // Most locales that use one put AM/PM at the end; split it off so it can be set smaller
     // without the digits themselves shrinking. Anything unexpected is printed verbatim
