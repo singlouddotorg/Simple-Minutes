@@ -36,7 +36,9 @@ async function atTime(page, hh, mm){
       resolve({
         text: el.textContent.trim(),
         warning: el.classList.contains('break-soon'),
+        imminent: el.classList.contains('break-imminent'),
         animated: cs.animationName !== 'none',
+        animationDuration: cs.animationDuration,
         color: cs.color
       });
     }, 120));
@@ -119,6 +121,28 @@ async function setup(page, breaks, opts){
   check('the clock is not animated the rest of the time', calm.animated === false, 'animation ' + calm.animated);
   check('the time itself is still readable while warning', /\d{1,2}:\d{2}/.test(warn.text), warn.text);
 
+  // ---- the minute right before and right after: the pulse triples ----
+  const imminentCases = [
+    [10, 28, false, 'three minutes before: normal pulse'],
+    [10, 29, true,  'one minute before: pulse triples'],
+    [10, 30, true,  'at the break time: pulse triples'],
+    [10, 31, true,  'one minute after: pulse triples'],
+    [10, 32, false, 'two minutes after: back to the normal pulse']
+  ];
+  let normalDuration = null;
+  for (const [hh, mm, want, label] of imminentCases){
+    const state = await atTime(page, hh, mm);
+    check(label, state.imminent === want, state.text + ' imminent=' + state.imminent + ' dur=' + state.animationDuration);
+    if (!want) normalDuration = state.animationDuration;
+  }
+  const imminentState = await atTime(page, 10, 30);
+  check('the imminent pulse is faster than the normal one',
+    parseFloat(imminentState.animationDuration) < parseFloat(normalDuration),
+    imminentState.animationDuration + ' vs ' + normalDuration);
+  check('the imminent pulse is roughly a third of the normal duration',
+    Math.abs(parseFloat(imminentState.animationDuration) - parseFloat(normalDuration) / 3) < 0.05,
+    imminentState.animationDuration + ' vs ' + normalDuration);
+
   // ---- taking the break clears its own warning, and only its own ----
   await atTime(page, 10, 28);
   await page.click('#breakBtn');
@@ -180,6 +204,8 @@ async function setup(page, breaks, opts){
   const rmWarn = await atTime(rmPage, 10, 28);
   check('reduced motion still gets the red warning', rmWarn.warning === true && /rgb\(138, 46, 46\)/.test(rmWarn.color), rmWarn.color);
   check('reduced motion does not pulse', rmWarn.animated === false, 'animation ' + rmWarn.animated);
+  const rmImminent = await atTime(rmPage, 10, 30);
+  check('reduced motion does not pulse even in the imminent window', rmImminent.animated === false, 'animation ' + rmImminent.animated);
   await rmCtx.close();
 
   // ---- wake lock ----

@@ -361,6 +361,12 @@
     </div>
 
     <div class="card">
+      <!-- Hidden by default, shown only where the Web Share API can genuinely take a
+           file (see the feature-detect below) - this is what actually gets a CSV off an
+           iPhone in one tap, straight to Messages, Mail, AirDrop, or Files, rather than a
+           Download that on iOS Safari often just opens the CSV in a new tab with nowhere
+           obvious to send it from. -->
+      <button type="button" class="btn-primary" id="shareBtn" style="margin-bottom:10px; display:none;">Share CSV&hellip;</button>
       <div class="export-row">
         <button type="button" class="btn-secondary" id="copyBtn">Copy CSV</button>
         <button type="button" class="btn-secondary" id="downloadBtn">Download CSV</button>
@@ -433,6 +439,7 @@
   var doneEntryBtn = document.getElementById("doneEntryBtn");
   var tallyEl = document.getElementById("tally");
   var recentList = document.getElementById("recentList");
+  var shareBtn = document.getElementById("shareBtn");
   var copyBtn = document.getElementById("copyBtn");
   var downloadBtn = document.getElementById("downloadBtn");
   var localSaveStatusEl = document.getElementById("localSaveStatus");
@@ -1538,7 +1545,7 @@
   // executes an imported file as code, rejects a Library schema it doesn't recognize, and
   // falls back to a bundled copy of tunebook-library.js before ever reaching the manual
   // picker, so the app now works the first time it's ever opened with no signal at all.
-  var SIMPLE_MINUTES_VERSION = "1.1.0";
+  var SIMPLE_MINUTES_VERSION = "1.2.0"; // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
   var versionFooterEl = document.getElementById("versionFooter");
   if(versionFooterEl){
     versionFooterEl.textContent = "Simple Minutes \u00b7 Version " + SIMPLE_MINUTES_VERSION +
@@ -1600,6 +1607,43 @@
   }
 
   downloadBtn.addEventListener("click", function(){ downloadCsv(""); });
+
+  // Web Share API, level 2 (file sharing) - the real, native way a phone hands a file
+  // to another app: Messages, Mail, AirDrop, Files, whatever the person actually wants,
+  // in the one tap this device already knows how to do. Download exists and still works,
+  // but on iOS Safari specifically - this app's real audience - a downloaded blob often
+  // just opens the CSV in a new browser tab with no obvious next step, which is a much
+  // worse ending to a singing than a share sheet.
+  //
+  // Feature-detected properly rather than assumed from navigator.share alone: some
+  // browsers implement share() for text/links but not files, so the real test is
+  // canShare() against an actual File, wrapped in try/catch since canShare/File
+  // construction can themselves throw on an unsupported or locked-down browser rather
+  // than just returning false. Hidden entirely when unsupported, not shown disabled -
+  // there's nothing to explain here the way the wake-lock toggle has to (a browser that
+  // can't share files never will, mid-singing is not the moment to say so), and Copy/
+  // Download are still right there either way.
+  var shareSupported = false;
+  try{
+    shareSupported = !!(navigator.share && navigator.canShare &&
+      navigator.canShare({ files: [new File(["test"], "test.csv", { type: "text/csv" })] }));
+  }catch(e){ shareSupported = false; }
+  if(shareSupported) shareBtn.style.display = "block";
+
+  shareBtn.addEventListener("click", function(){
+    var csv = buildCsv();
+    var file = new File([csv], slugify(eventName) + "-" + eventDate + ".csv", { type: "text/csv" });
+    navigator.share({ files: [file], title: eventName || "Simple Minutes log" }).catch(function(err){
+      // Backing out of the share sheet throws AbortError - that's a genuine, ordinary
+      // "changed my mind," not a failure worth a message. Anything else gets a plain
+      // fallback pointer, since Copy and Download are both sitting right below this.
+      if(err && err.name !== "AbortError"){
+        localSaveStatusEl.style.display = "block";
+        localSaveStatusEl.textContent = "Couldn't open the share sheet — use Copy or Download instead.";
+        localSaveStatusEl.classList.add("error");
+      }
+    });
+  });
 
   copyBtn.addEventListener("click", function(){
     var csv = buildCsv();
