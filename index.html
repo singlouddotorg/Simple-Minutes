@@ -308,6 +308,10 @@
       <label for="locationInput">Location (optional)</label>
       <input type="text" id="locationInput" placeholder="e.g. St. David's, Roland Park">
     </div>
+    <div class="field">
+      <label for="presentInput">Number present (optional)</label>
+      <input type="text" id="presentInput" placeholder="e.g. 62">
+    </div>
     <label>Song sources</label>
     <div class="book-check-row" id="commonBookRow"></div>
     <div class="field">
@@ -391,7 +395,7 @@
 
   var libraryData = null;
   var books = []; // { abbr, name, badgeColor, badgeTextColor, songs: {page: title} | null }
-  var eventName = "", eventDate = "", eventLocation = "";
+  var eventName = "", eventDate = "", eventLocation = "", eventPresent = "";
   var entries = []; // { type: 'song'|'marker', book, page, song, marker, ts }
   var activeBookAbbr = null;
   var typed = "";
@@ -409,6 +413,7 @@
   var eventInput = document.getElementById("eventInput");
   var dateInput = document.getElementById("dateInput");
   var locationInput = document.getElementById("locationInput");
+  var presentInput = document.getElementById("presentInput");
   var commonBookRow = document.getElementById("commonBookRow");
   var bookSearchInput = document.getElementById("bookSearchInput");
   var bookSearchResults = document.getElementById("bookSearchResults");
@@ -914,6 +919,7 @@
     eventInput.value = saved.event || "";
     dateInput.value = saved.date || new Date().toISOString().slice(0,10);
     locationInput.value = saved.location || "";
+    presentInput.value = saved.present || "";
     selectedAbbrs = saved.selectedAbbrs || [];
     selectedAbbrs.forEach(function(abbr){
       var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
@@ -934,6 +940,7 @@
     selectedAbbrs = [];
     eventInput.value = "";
     locationInput.value = "";
+    presentInput.value = "";
     dateInput.value = new Date().toISOString().slice(0,10);
     commonBookRow.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
     renderBookSearchAdded();
@@ -955,6 +962,7 @@
     eventName = eventInput.value.trim();
     eventDate = dateInput.value;
     eventLocation = locationInput.value.trim();
+    eventPresent = presentInput.value.trim();
     books = selectedAbbrs.map(bookRecordFor);
     resolveSeriesFor(eventName, eventDate);
     logScreen.style.display = "block";
@@ -1001,7 +1009,7 @@
   // happened at a break is the Break marker itself, which is exported as it always was.
   function saveSetup(){
     localStorage.setItem(SETUP_KEY, JSON.stringify({
-      event: eventName, date: eventDate, location: eventLocation, selectedAbbrs: selectedAbbrs,
+      event: eventName, date: eventDate, location: eventLocation, present: eventPresent, selectedAbbrs: selectedAbbrs,
       breakTimes: breakTimes.filter(function(t){ return parseBreakTime(t) !== null; }),
       keepAwake: !!(wakeLockToggle && wakeLockToggle.checked)
     }));
@@ -1053,6 +1061,7 @@
     eventName = eventInput.value.trim();
     eventDate = dateInput.value;
     eventLocation = locationInput.value.trim();
+    eventPresent = presentInput.value.trim();
     if(!eventName){ eventInput.focus(); return; }
     if(!eventDate){ dateInput.focus(); return; }
     if(selectedAbbrs.length === 0){
@@ -1545,7 +1554,7 @@
   // executes an imported file as code, rejects a Library schema it doesn't recognize, and
   // falls back to a bundled copy of tunebook-library.js before ever reaching the manual
   // picker, so the app now works the first time it's ever opened with no signal at all.
-  var SIMPLE_MINUTES_VERSION = "1.2.0"; // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
+  var SIMPLE_MINUTES_VERSION = "1.3.0"; // 2026-09-10 Added "Number present (optional)" to Setup, on Kevin's own request: a big turnout one week and a small one two months later is real, useful data (seasonal fluctuation, growth or contraction over time) and there was no practical way to capture it here before. Not a new schema field - meta.present already exists in Schema 5 and Minutes' own Event Details has read, written, and optionally printed it ("62 singers were present") for a long time; Simple Minutes just never surfaced a field for it. Lives in Setup right after Location, persists and reloads the same way Event/Date/Location already do, and rides into the exported CSV as a genuine meta.present metadata row - present only when a number was actually entered, and blank on every real Event/Date/Location/officer/Series column on that row, matching Minutes' own metaRow() convention exactly (RC4-01) so a reimport can never mistake it for a second session. // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
   var versionFooterEl = document.getElementById("versionFooter");
   if(versionFooterEl){
     versionFooterEl.textContent = "Simple Minutes \u00b7 Version " + SIMPLE_MINUTES_VERSION +
@@ -1586,6 +1595,20 @@
           [en.book, en.book, "", "", en.page, en.song, "", "", "", ts, timeEntered, currentSeriesCode || "", currentEventId || "", currentPreviousEventId || "", ""]));
       }
     });
+    // Number present, if given, rides in as a real Schema 5 metadata row (meta.present) -
+    // the same field Minutes' own Event Details already reads, writes, and can print in the
+    // compiled minutes ("62 singers were present") when its Number of Singers toggle is on.
+    // Not a new schema field, just Simple Minutes finally exposing one that already existed.
+    // Matches Minutes' own metaRow() convention exactly: Event/Date/Location, every officer
+    // column, and Series/Event ID all stay blank on a metadata row - the field/value pair is
+    // the entire payload, and repeating the session's own values here would risk a reimport
+    // mistaking this row for a second, real session on rehydration.
+    if(eventPresent){
+      rows.push(["5", order++, "metadata", "", "", "meta.present", eventPresent,
+        "", "", "", "", "", "", "", "", "", "",
+        "", "", "", "", "", "", "", "", "", "", "",
+        "", "", "", ""]);
+    }
     return rows.map(function(r){ return r.map(csvCell).join(","); }).join("\r\n");
   }
 
