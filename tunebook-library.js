@@ -743,12 +743,13 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
     "w_ObH": {
       "workId": "w_ObH",
       "workCode": "ObH",
+      "shmhaCode": "OH",
       "titleProper": "Oberlin Harmony: Songs We Like To Sing",
       "firstEditionYear": "2002",
       "responsibilityStatement": "Chloe Maher and Charles Wells",
       "shapeSystem": "4-shape",
       "catalogingStatus": "unreviewed",
-      "source": "Master Code List audit import"
+      "source": "Master Code List audit import. Merged 2026-09-11 with w_shmha_OH ('Oberlin Harmony', SHMHA code OH, a bare Level 1 record with no compiler or year of its own) - Kevin confirmed these are the same book while a batch of five workCode fixes surfaced it; ObH is the real SingLoud work code, OH its SHMHA code, now carried here as shmhaCode rather than as a separate provisional work record (same pattern as AHI/AH above)."
     },
     "w_OhS": {
       "workId": "w_OhS",
@@ -1314,52 +1315,39 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
       "catalogingStatus": "unreviewed",
       "source": "Master Code List audit import"
     },
-    "w_shmha_AV": {
-      "workId": "w_shmha_AV",
-      "workCode": "AV",
-      "workCodeStatus": "unknown",
+    "w_AmV": {
+      "workId": "w_AmV",
+      "workCode": "AmV",
       "shmhaCode": "AV",
       "titleProper": "American Vocalist",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its 2-letter SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_CHa, w_shmha_GOS, w_shmha_LD, w_shmha_OH) were showing their raw workId as a badge instead of a real code: first promoted straight to the bare 2-letter SHMHA code \"AV\", which Kevin then caught as wrong on its own terms - SingLoud work codes are always exactly three glyphs, a number only in the extreme case of a title's own volume/part numeral (see https://sacredharp.substack.com/p/tools-shape-note-tunebook-identification) - so re-derived properly as \"AmV\" (American + Vocalist, matching the AmC/AmH sibling pattern already used for other \"American ___\" titles), checked clean against every workCode and editionCode in the Library. workId renamed to w_AmV to match; shmhaCode (\"AV\", the original 2-letter code) kept as the historical record of where the provisional code came from."
     },
-    "w_shmha_CHa": {
-      "workId": "w_shmha_CHa",
+    "w_CHa": {
+      "workId": "w_CHa",
       "workCode": "CHa",
-      "workCodeStatus": "unknown",
       "shmhaCode": "CHa",
       "titleProper": "Christian Harmony (Alabama)",
       "shapeSystem": "7-shape",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_AV, w_shmha_GOS, w_shmha_LD, w_shmha_OH) were showing their raw workId as a badge instead of a real code: checked \"CHa\" against every workCode and editionCode in the Library - already a proper 3-glyph SingLoud-style code (unlike its four siblings, which were only 2 glyphs and had to be re-derived) - no collisions, and promoted it to a real SingLoud workCode. workId renamed from w_shmha_CHa to w_CHa to match (its one edition, e_CHa1958, updated to point at the new workId - editionCode CHa1958 itself is unchanged, since it was already built from this same workCode); shmhaCode kept as the historical record of where the code came from."
     },
-    "w_shmha_GOS": {
-      "workId": "w_shmha_GOS",
+    "w_GOS": {
+      "workId": "w_GOS",
       "workCode": "GOS",
-      "workCodeStatus": "unknown",
       "shmhaCode": "GOS",
       "titleProper": "The Good Old Songs",
       "shapeSystem": "7-shape",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_AV, w_shmha_CHa, w_shmha_LD, w_shmha_OH) were showing their raw workId as a badge instead of a real code: checked \"GOS\" against every workCode and editionCode in the Library - already a proper 3-glyph SingLoud-style code (unlike its siblings AV, LD, and OH, which were only 2 glyphs and had to be re-derived) - no collisions, and promoted it to a real SingLoud workCode. workId renamed from w_shmha_GOS to w_GOS to match; shmhaCode kept as the historical record of where the code came from."
     },
-    "w_shmha_LD": {
-      "workId": "w_shmha_LD",
-      "workCode": "LD",
-      "workCodeStatus": "unknown",
+    "w_LlH": {
+      "workId": "w_LlH",
+      "workCode": "LlH",
       "shmhaCode": "LD",
       "titleProper": "Lloyd's Hymnal",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
-    },
-    "w_shmha_OH": {
-      "workId": "w_shmha_OH",
-      "workCode": "OH",
-      "workCodeStatus": "unknown",
-      "shmhaCode": "OH",
-      "titleProper": "Oberlin Harmony",
-      "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_AV, w_shmha_CHa, w_shmha_GOS, w_shmha_OH) were showing their raw workId as a badge instead of a real code: first promoted straight to the bare 2-letter SHMHA code \"LD\", which Kevin then caught as wrong on its own terms - SingLoud work codes are always exactly three glyphs, a number only in the extreme case of a title's own volume/part numeral (see https://sacredharp.substack.com/p/tools-shape-note-tunebook-identification) - so re-derived properly as \"LlH\" (the title's own first two letters, \"Lloyd's\", plus Hymnal's initial), checked clean against every workCode and editionCode in the Library. workId renamed to w_LlH to match; shmhaCode (\"LD\", the original SHMHA code) kept as the historical record of where the provisional code came from."
     },
     "w_ClH": {
       "workId": "w_ClH",
@@ -1495,7 +1483,7 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
   editions: {
     "e_CHa1958": {
       "editionId": "e_CHa1958",
-      "workId": "w_shmha_CHa",
+      "workId": "w_CHa",
       "editionIdentifierYear": "1958",
       "editionCode": "CHa1958",
       "badgeColor": "#896b01",
