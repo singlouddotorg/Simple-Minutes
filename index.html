@@ -175,7 +175,14 @@
   .book-check-item{ display:flex; align-items:center; gap:10px; padding:9px 4px; }
   .book-check-item input{ width:20px; height:20px; flex-shrink:0; }
   .book-check-item .swatch{ display:inline-flex; align-items:center; justify-content:center; height:22px; min-width:66px; padding:0 8px; border-radius:999px; font-size:11.5px; font-weight:700; flex-shrink:0; }
-  .book-check-item .name{ font-size:14px; flex:1; }
+  /* .book-check-item is rendered as a <label> for the common-book checkboxes, and the
+     app's own generic label{text-transform:uppercase} rule (further up this sheet) was
+     inherited straight through into the book name text - so "Christian Harmony" showed
+     as "CHRISTIAN HARMONY" even though the Library's own commonName field is genuine
+     title case. Overridden back to none here so a book's name renders exactly as typed
+     in the Library, on both this checkbox row and the plain-div search-added row that
+     shares the same class. */
+  .book-check-item .name{ font-size:14px; flex:1; text-transform:none; }
   #bookSearchStatus{ font-size:12px; color:var(--oxblood); margin:-8px 0 12px; }
   #bookSearchAmbiguous{ display:none; flex-wrap:wrap; gap:6px; margin:-8px 0 12px; }
   #bookSearchAmbiguous button{ font-size:12px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; }
@@ -197,6 +204,10 @@
   .book-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
   .book-picker button{ flex:1 1 auto; min-width:100px; padding:14px 10px; border-radius:10px; border:none; font-size:15px; font-weight:700; }
   .active-book-badge{ display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:700; margin-bottom:10px; }
+  /* Same pill shape as the book badge, and - since it's set from the same active book's own
+     badgeColor/badgeTextColor at render time - the same colors too, so the two badges read
+     as a matched pair rather than one being a plain text link bolted on beside the other. */
+  .other-pages-badge{ display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:700; margin:0 0 10px 8px; cursor:pointer; }
   .display-box{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; min-height:64px; }
   /* The typed page number and the clock share one baseline row. The clock costs no
      vertical space at all this way, and it sits in what was dead space to the right of a
@@ -262,7 +273,6 @@
   .keypad button.picker-opt .picker-num{ font-size:18px; font-weight:700; color:var(--oxblood); }
   .keypad button.picker-nav{ font-size:13px; font-weight:600; color:var(--ink-soft); }
   .keypad button:disabled{ visibility:hidden; }
-  .other-pages-link{ display:inline-block; font-size:12px; color:var(--oxblood); text-decoration:underline; cursor:pointer; margin:0 0 8px; }
   .action-row{ display:flex; gap:8px; margin-bottom:10px; }
   .action-row button{ flex:1; padding:14px; border-radius:10px; font-size:15px; font-weight:700; border:1px solid var(--line); background:#fff; color:var(--ink); }
   .action-row .backspace{ flex:0 0 64px; font-size:20px; }
@@ -364,7 +374,7 @@
 
     <div class="card">
       <div id="bookPickerWrap"></div>
-      <div id="otherPagesLink" class="other-pages-link" style="display:none;"></div>
+      <span id="otherPagesLink" class="other-pages-badge" style="display:none;">OTHER</span>
       <div class="display-box">
         <div class="display-head">
           <div class="display-digits" id="displayDigits">&nbsp;</div>
@@ -1367,7 +1377,7 @@
       badge.className = "active-book-badge";
       badge.style.background = books[0].badgeColor;
       badge.style.color = books[0].badgeTextColor;
-      badge.textContent = books[0].name;
+      badge.textContent = books[0].abbr; // the SingLoud edition code, same as Setup's own swatch
       bookPickerWrap.appendChild(badge);
       return;
     }
@@ -1378,7 +1388,7 @@
       btn.type = "button";
       btn.style.background = b.badgeColor;
       btn.style.color = b.badgeTextColor;
-      btn.textContent = b.name;
+      btn.textContent = b.abbr; // the SingLoud edition code, same as Setup's own swatch
       if(b.abbr === activeBookAbbr) btn.style.outline = "3px solid " + b.badgeTextColor;
       btn.addEventListener("click", function(){
         activeBookAbbr = b.abbr;
@@ -1446,20 +1456,24 @@
       }
       keypad.appendChild(btn);
     }
-    var moreBtn = document.createElement("button");
-    moreBtn.type = "button";
-    moreBtn.className = "picker-nav";
+    // Bottom row reuses T/0/B's own three slots: Back and Next only appear (and only do
+    // anything) once there's more than one page to move between, with Cancel always in
+    // the middle, where 0 normally sits.
+    var backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "picker-nav";
     if(pageCount > 1){
-      moreBtn.textContent = "More (" + (pickerPage + 1) + "/" + pageCount + ")";
-      moreBtn.addEventListener("click", function(){
-        pickerPage = (pickerPage + 1) % pageCount;
+      backBtn.textContent = "Back";
+      backBtn.addEventListener("click", function(){
+        pickerPage = (pickerPage - 1 + pageCount) % pageCount;
         renderKeypad();
         renderDisplay();
       });
     } else {
-      moreBtn.disabled = true;
+      backBtn.disabled = true;
     }
-    keypad.appendChild(moreBtn);
+    keypad.appendChild(backBtn);
+
     var cancelBtn = document.createElement("button");
     cancelBtn.type = "button";
     cancelBtn.className = "picker-nav";
@@ -1471,6 +1485,21 @@
       renderDisplay();
     });
     keypad.appendChild(cancelBtn);
+
+    var nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "picker-nav";
+    if(pageCount > 1){
+      nextBtn.textContent = "Next";
+      nextBtn.addEventListener("click", function(){
+        pickerPage = (pickerPage + 1) % pageCount;
+        renderKeypad();
+        renderDisplay();
+      });
+    } else {
+      nextBtn.disabled = true;
+    }
+    keypad.appendChild(nextBtn);
   }
 
   function choosePickerItem(item){
@@ -1494,23 +1523,52 @@
   // trailing t/b split - roman numerals, an appendix's "a1, a2..." series, HoA1973's "A"
   // variants, EaI1802/WRS1820's "29.1/29.2/29.3" split-verse keys, and so on. Cached per
   // book since the Library's songs{} doesn't change during a singing.
+  // Numeric-aware comparison for page/song keys: splits each key into digit-run and
+  // non-digit-run segments and compares digit runs by value, not by character, so "a20"
+  // correctly sorts before "a168" instead of after it (plain string/localeCompare puts
+  // "a168" first, since '1' < '2' as characters even though 168 > 20 as numbers - the bug
+  // Kevin caught in the very first real screenshot of this feature).
+  function naturalKeyCompare(a, b){
+    var re = /(\d+)|(\D+)/g;
+    var as = a.match(re) || [a];
+    var bs = b.match(re) || [b];
+    var len = Math.max(as.length, bs.length);
+    for(var i = 0; i < len; i++){
+      var av = as[i], bv = bs[i];
+      if(av === undefined) return -1;
+      if(bv === undefined) return 1;
+      var aIsNum = /^\d+$/.test(av), bIsNum = /^\d+$/.test(bv);
+      if(aIsNum && bIsNum){
+        var d = parseInt(av, 10) - parseInt(bv, 10);
+        if(d) return d;
+      } else {
+        var c = av.localeCompare(bv);
+        if(c) return c;
+      }
+    }
+    return 0;
+  }
+
   function exceptionalKeysFor(book){
     if(!book.songs) return [];
     if(exceptionalKeysCache[book.abbr]) return exceptionalKeysCache[book.abbr];
+    // Grouped before the natural sort, not left to it alone: plain page-numbered keys
+    // ("22A") read first in the book's own page order, then letter-prefixed series that
+    // still carry a number ("a1".."a63"), then anything with no digit at all (roman
+    // numerals) - each group internally in natural numeric order.
+    function group(k){
+      if(/^\d/.test(k)) return 0;
+      if(/\d/.test(k)) return 1;
+      return 2;
+    }
     var out = Object.keys(book.songs).filter(function(k){
       return !/^\d+[tb]?$/.test(k);
     }).map(function(k){
       return { key: k, title: (book.songs[k] && book.songs[k].title) || "" };
     }).sort(function(a, b){
-      var an = /^\d+/.exec(a.key), bn = /^\d+/.exec(b.key);
-      if(an && bn){
-        var d = parseInt(an[0], 10) - parseInt(bn[0], 10);
-        if(d) return d;
-        return a.key.localeCompare(b.key);
-      }
-      if(an && !bn) return -1;
-      if(!an && bn) return 1;
-      return a.key.localeCompare(b.key);
+      var ga = group(a.key), gb = group(b.key);
+      if(ga !== gb) return ga - gb;
+      return naturalKeyCompare(a.key, b.key);
     });
     exceptionalKeysCache[book.abbr] = out;
     return out;
@@ -1542,11 +1600,16 @@
     var list = book ? exceptionalKeysFor(book) : [];
     if(!list.length){
       otherPagesLinkEl.style.display = "none";
-      otherPagesLinkEl.textContent = "";
+      otherPagesLinkEl.title = "";
       return;
     }
-    otherPagesLinkEl.style.display = "inline-block";
-    otherPagesLinkEl.textContent = "Other pages (" + list.length + ")\u2026";
+    // A matched pair with the active book's own badge, not a plain text link: same pill
+    // shape, same badgeColor/badgeTextColor as that book, labeled "OTHER" (the count is
+    // still there as a tooltip for anyone who hovers, but isn't part of the label itself).
+    otherPagesLinkEl.style.display = "inline-flex";
+    otherPagesLinkEl.style.background = book.badgeColor;
+    otherPagesLinkEl.style.color = book.badgeTextColor;
+    otherPagesLinkEl.title = list.length + " other page" + (list.length === 1 ? "" : "s");
   }
 
   otherPagesLinkEl.addEventListener("click", function(){
@@ -1768,7 +1831,7 @@
   // executes an imported file as code, rejects a Library schema it doesn't recognize, and
   // falls back to a bundled copy of tunebook-library.js before ever reaching the manual
   // picker, so the app now works the first time it's ever opened with no signal at all.
-  var SIMPLE_MINUTES_VERSION = "1.4.0"; // 2026-09-10 Fixed the keypad's inability to enter a book's non-numeric/non-t-b canonical page or song keys (the release-readiness review's Issue #3), on Kevin's own proposed design: when the digits typed so far are genuinely ambiguous - HoA1973's "22" matches both plain "22" (Sharpsburg) and "22A" (Doxology), two different songs, so guessing would silently log the wrong one - the keypad itself repurposes its own 1-9 buttons into a numbered list of the real candidates, tapped to choose; no new physical buttons, exactly as proposed. A "This page has a top and bottom - tap T or B" prefix that resolves to exactly a t/b pair still gets the old one-line message instead, since T and B are already dedicated buttons. A new "Other pages (N)" link appears next to the book badge whenever the active book has any such keys at all - covering the ones no digit-typing could ever reach in the first place, like CHW2015's roman-numeral front matter (xixA) or NHC2001's lettered appendix series (a1..a63, 44 of them) - and opens the same numbered picker to browse and choose from, paginated 9 at a time. Selecting from the picker always uses the exact canonical Library key verbatim (never a normalized or stripped-down version), so HoA1973's 22 and 22A can never be confused for each other. // 2026-09-10 Dropped "(optional)" from the Number present label, on Kevin's own report: at half-width next to Date, that qualifier wrapped the label to two lines and threw off the alignment the field-row split was meant to produce. One line now, level with Date's own label. Still genuinely optional - nothing about validation changed, just the wording. // 2026-09-10 Setup layout follow-up, on Kevin's own report: four stacked fields read as three now - Location moved up to sit right under Event name, and Date/Number present share one line (a .field-row flex pair, same label/input styling as every other field, just at half width) instead of each taking a full row. Purely visual; nothing about what's stored, validated, or exported changed. // 2026-09-10 Added "Number present (optional)" to Setup, on Kevin's own request: a big turnout one week and a small one two months later is real, useful data (seasonal fluctuation, growth or contraction over time) and there was no practical way to capture it here before. Not a new schema field - meta.present already exists in Schema 5 and Minutes' own Event Details has read, written, and optionally printed it ("62 singers were present") for a long time; Simple Minutes just never surfaced a field for it. Lives in Setup right after Location, persists and reloads the same way Event/Date/Location already do, and rides into the exported CSV as a genuine meta.present metadata row - present only when a number was actually entered, and blank on every real Event/Date/Location/officer/Series column on that row, matching Minutes' own metaRow() convention exactly (RC4-01) so a reimport can never mistake it for a second session. // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
+  var SIMPLE_MINUTES_VERSION = "1.5.0"; // 2026-09-11 Four follow-ups to the exceptional-key picker, all on Kevin's own report: (1) "Other pages" is now a pill badge styled with the active book's own badgeColor/badgeTextColor, labeled "OTHER", sitting next to the book's own badge as a matched pair, instead of a plain underlined text link. (2) Book names on the Setup page (the common-book checkboxes and the search-added row) now render exactly as typed in the Library - "Christian Harmony (Carolina Book)", not "CHRISTIAN HARMONY (CAROLINA BOOK)" - fixing an inherited text-transform:uppercase the row's own <label> tag was passing down from this app's generic label styling, which was never meant to touch book titles. (3) The book badge on the song entry page (both the single-book badge and the multi-book picker buttons) now shows the SingLoud edition code (e.g. "HoA1973"), the same identifier Setup's own swatch already shows, instead of the common name - so the two screens identify a book the same way. (4) The picker's T and B keypad slots become "Back" and "Next" whenever there's more than one page of candidates to browse (the "0" slot stays Cancel throughout), replacing the single "More (x/y)" button that used to sit in T's spot alone. // 2026-09-11 Fixed the picker's own sort order, on Kevin's own report from a live screenshot: NHC2001's appendix list showed "a168" before "a20" because it was compared character by character ('1' < '2') rather than by the actual page number. Both "Other pages" and the auto-triggered ambiguity picker now sort with a numeric-aware comparator that splits each key into digit and non-digit runs and compares digit runs by value - plain page-numbered keys first in real page order, then letter-prefixed series like "a1..a63" in real numeric order, then anything with no digit at all. // 2026-09-10 Fixed the keypad's inability to enter a book's non-numeric/non-t-b canonical page or song keys (the release-readiness review's Issue #3), on Kevin's own proposed design: when the digits typed so far are genuinely ambiguous - HoA1973's "22" matches both plain "22" (Sharpsburg) and "22A" (Doxology), two different songs, so guessing would silently log the wrong one - the keypad itself repurposes its own 1-9 buttons into a numbered list of the real candidates, tapped to choose; no new physical buttons, exactly as proposed. A "This page has a top and bottom - tap T or B" prefix that resolves to exactly a t/b pair still gets the old one-line message instead, since T and B are already dedicated buttons. A new "Other pages (N)" link appears next to the book badge whenever the active book has any such keys at all - covering the ones no digit-typing could ever reach in the first place, like CHW2015's roman-numeral front matter (xixA) or NHC2001's lettered appendix series (a1..a63, 44 of them) - and opens the same numbered picker to browse and choose from, paginated 9 at a time. Selecting from the picker always uses the exact canonical Library key verbatim (never a normalized or stripped-down version), so HoA1973's 22 and 22A can never be confused for each other. // 2026-09-10 Dropped "(optional)" from the Number present label, on Kevin's own report: at half-width next to Date, that qualifier wrapped the label to two lines and threw off the alignment the field-row split was meant to produce. One line now, level with Date's own label. Still genuinely optional - nothing about validation changed, just the wording. // 2026-09-10 Setup layout follow-up, on Kevin's own report: four stacked fields read as three now - Location moved up to sit right under Event name, and Date/Number present share one line (a .field-row flex pair, same label/input styling as every other field, just at half width) instead of each taking a full row. Purely visual; nothing about what's stored, validated, or exported changed. // 2026-09-10 Added "Number present (optional)" to Setup, on Kevin's own request: a big turnout one week and a small one two months later is real, useful data (seasonal fluctuation, growth or contraction over time) and there was no practical way to capture it here before. Not a new schema field - meta.present already exists in Schema 5 and Minutes' own Event Details has read, written, and optionally printed it ("62 singers were present") for a long time; Simple Minutes just never surfaced a field for it. Lives in Setup right after Location, persists and reloads the same way Event/Date/Location already do, and rides into the exported CSV as a genuine meta.present metadata row - present only when a number was actually entered, and blank on every real Event/Date/Location/officer/Series column on that row, matching Minutes' own metaRow() convention exactly (RC4-01) so a reimport can never mistake it for a second session. // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
   var versionFooterEl = document.getElementById("versionFooter");
   if(versionFooterEl){
     versionFooterEl.textContent = "Simple Minutes \u00b7 Version " + SIMPLE_MINUTES_VERSION +
