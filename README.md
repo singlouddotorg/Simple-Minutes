@@ -41,6 +41,29 @@ nothing has to be configured on either side.
 The current time sits beside the page number you're typing, at the same size, so you can
 check it without leaving the app.
 
+## What it knows, beyond the keypad
+
+A few things happen automatically, from the same shared tunebook data the rest of the Suite
+uses — nothing to turn on, nothing to configure:
+
+- **Top and bottom pages.** When a page number belongs to two different songs printed one
+  above the other, typing the number alone doesn't guess which one was meant — it prompts
+  "tap T or B," and logs whichever one is actually picked.
+- **Already logged today.** Tapping a page that's already been logged once this singing
+  flags it ("Already logged once today") instead of silently recording it again, so an
+  accidental repeat is caught in the moment rather than found later in the minutes.
+- **Numbers the book doesn't recognize.** Typing a number the book's index has no song at
+  all — a mistyped page, or one that's genuinely blank — doesn't get accepted quietly; it
+  takes a second tap of Done ("Add anyway") to log it, so a typo doesn't slip into the
+  record unnoticed.
+- **Pages that don't fit a plain number.** A few books number some of their pages outside
+  the usual page-plus-T/B pattern — roman numerals in the front matter, a lettered appendix
+  series, even two different songs sharing one printed number (so guessing which one was
+  meant could log the wrong song entirely). Any such book shows an "OTHER" badge next to its
+  own; tapping it turns the keypad itself into a numbered list of those real pages to choose
+  from — Back and Next if there's more than one page of them — so they're just as loggable
+  as an ordinary page, with the exact page as printed, never a guessed or simplified one.
+
 ## Where the songbook data comes from
 
 On opening, the app first tries fetching `tunebook-library.js` from the
