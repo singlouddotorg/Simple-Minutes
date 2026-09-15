@@ -514,10 +514,10 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
       "workCode": "KsH",
       "titleProper": "Keystone Harmony",
       "firstEditionYear": "1999",
-      "responsibilityStatement": "Unlocated",
+      "responsibilityStatement": "Gabriel Kastelle and Doron A. Henkin",
       "shapeSystem": "4-shape",
       "catalogingStatus": "unreviewed",
-      "source": "Master Code List audit import"
+      "source": "Master Code List audit import (bare record). Compiler credit and full Level 3 song data added from Kevin's own copy of the book: a printed 29-tune alphabetical index (title/page/composer/first line/meter/year/verse) plus its title and introduction pages. Printed January 1999 for the First Keystone Shapenote Singing Convention, Chestnut Hill Friends Meeting, Philadelphia; per its introduction, a collection of old and new tunes carried west and south out of Pennsylvania through Harrisburg and the Shenandoah Valley. Three page numbers (2, 27, 30) each carry two tunes printed one above the other; top/bottom order for all three was confirmed directly by Kevin against the physical book (2: Liberty Hall/Bethel; 27: Consolation/Harrisburg; 30: Brier Island/Forsaken). See w_KfA (Kastelle's Kairos for All) for the same compiler's other work."
     },
     "w_KtH": {
       "workId": "w_KtH",
@@ -743,12 +743,13 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
     "w_ObH": {
       "workId": "w_ObH",
       "workCode": "ObH",
+      "shmhaCode": "OH",
       "titleProper": "Oberlin Harmony: Songs We Like To Sing",
       "firstEditionYear": "2002",
       "responsibilityStatement": "Chloe Maher and Charles Wells",
       "shapeSystem": "4-shape",
       "catalogingStatus": "unreviewed",
-      "source": "Master Code List audit import"
+      "source": "Master Code List audit import. Merged 2026-09-11 with w_shmha_OH ('Oberlin Harmony', SHMHA code OH, a bare Level 1 record with no compiler or year of its own) - Kevin confirmed these are the same book while a batch of five workCode fixes surfaced it; ObH is the real SingLoud work code, OH its SHMHA code, now carried here as shmhaCode rather than as a separate provisional work record (same pattern as AHI/AH above)."
     },
     "w_OhS": {
       "workId": "w_OhS",
@@ -1314,52 +1315,39 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
       "catalogingStatus": "unreviewed",
       "source": "Master Code List audit import"
     },
-    "w_shmha_AV": {
-      "workId": "w_shmha_AV",
-      "workCode": "AV",
-      "workCodeStatus": "unknown",
+    "w_AmV": {
+      "workId": "w_AmV",
+      "workCode": "AmV",
       "shmhaCode": "AV",
       "titleProper": "American Vocalist",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its 2-letter SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_CHa, w_shmha_GOS, w_shmha_LD, w_shmha_OH) were showing their raw workId as a badge instead of a real code: first promoted straight to the bare 2-letter SHMHA code \"AV\", which Kevin then caught as wrong on its own terms - SingLoud work codes are always exactly three glyphs, a number only in the extreme case of a title's own volume/part numeral (see https://sacredharp.substack.com/p/tools-shape-note-tunebook-identification) - so re-derived properly as \"AmV\" (American + Vocalist, matching the AmC/AmH sibling pattern already used for other \"American ___\" titles), checked clean against every workCode and editionCode in the Library. workId renamed to w_AmV to match; shmhaCode (\"AV\", the original 2-letter code) kept as the historical record of where the provisional code came from."
     },
-    "w_shmha_CHa": {
-      "workId": "w_shmha_CHa",
+    "w_CHa": {
+      "workId": "w_CHa",
       "workCode": "CHa",
-      "workCodeStatus": "unknown",
       "shmhaCode": "CHa",
       "titleProper": "Christian Harmony (Alabama)",
       "shapeSystem": "7-shape",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_AV, w_shmha_GOS, w_shmha_LD, w_shmha_OH) were showing their raw workId as a badge instead of a real code: checked \"CHa\" against every workCode and editionCode in the Library - already a proper 3-glyph SingLoud-style code (unlike its four siblings, which were only 2 glyphs and had to be re-derived) - no collisions, and promoted it to a real SingLoud workCode. workId renamed from w_shmha_CHa to w_CHa to match (its one edition, e_CHa1958, updated to point at the new workId - editionCode CHa1958 itself is unchanged, since it was already built from this same workCode); shmhaCode kept as the historical record of where the code came from."
     },
-    "w_shmha_GOS": {
-      "workId": "w_shmha_GOS",
+    "w_GOS": {
+      "workId": "w_GOS",
       "workCode": "GOS",
-      "workCodeStatus": "unknown",
       "shmhaCode": "GOS",
       "titleProper": "The Good Old Songs",
       "shapeSystem": "7-shape",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_AV, w_shmha_CHa, w_shmha_LD, w_shmha_OH) were showing their raw workId as a badge instead of a real code: checked \"GOS\" against every workCode and editionCode in the Library - already a proper 3-glyph SingLoud-style code (unlike its siblings AV, LD, and OH, which were only 2 glyphs and had to be re-derived) - no collisions, and promoted it to a real SingLoud workCode. workId renamed from w_shmha_GOS to w_GOS to match; shmhaCode kept as the historical record of where the code came from."
     },
-    "w_shmha_LD": {
-      "workId": "w_shmha_LD",
-      "workCode": "LD",
-      "workCodeStatus": "unknown",
+    "w_LlH": {
+      "workId": "w_LlH",
+      "workCode": "LlH",
       "shmhaCode": "LD",
       "titleProper": "Lloyd's Hymnal",
       "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
-    },
-    "w_shmha_OH": {
-      "workId": "w_shmha_OH",
-      "workCode": "OH",
-      "workCodeStatus": "unknown",
-      "shmhaCode": "OH",
-      "titleProper": "Oberlin Harmony",
-      "catalogingStatus": "unreviewed",
-      "source": "master-tunebook-list.js (never had a real SingLoud work code; also absent from the Master Code List audit, for the same reason - workCode here is the SHMHA code, used as a provisional identifier only, not a real SingLoud work code)"
+      "source": "master-tunebook-list.js (never had a real SingLoud work code, so its SHMHA code was carried over as a provisional workCode, flagged workCodeStatus:\"unknown\" and displayed as the full workId rather than the bare code, since it had never actually been checked against the rest of the Library's codes). 2026-09-11, on Kevin's own report that this and four siblings (w_shmha_AV, w_shmha_CHa, w_shmha_GOS, w_shmha_OH) were showing their raw workId as a badge instead of a real code: first promoted straight to the bare 2-letter SHMHA code \"LD\", which Kevin then caught as wrong on its own terms - SingLoud work codes are always exactly three glyphs, a number only in the extreme case of a title's own volume/part numeral (see https://sacredharp.substack.com/p/tools-shape-note-tunebook-identification) - so re-derived properly as \"LlH\" (the title's own first two letters, \"Lloyd's\", plus Hymnal's initial), checked clean against every workCode and editionCode in the Library. workId renamed to w_LlH to match; shmhaCode (\"LD\", the original SHMHA code) kept as the historical record of where the provisional code came from."
     },
     "w_ClH": {
       "workId": "w_ClH",
@@ -1495,7 +1483,7 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
   editions: {
     "e_CHa1958": {
       "editionId": "e_CHa1958",
-      "workId": "w_shmha_CHa",
+      "workId": "w_CHa",
       "editionIdentifierYear": "1958",
       "editionCode": "CHa1958",
       "badgeColor": "#896b01",
@@ -10303,6 +10291,58 @@ const EZ_MINUTES_TUNEBOOK_LIBRARY = {
       "indexStatus": "none",
       "ezMinutesVisibility": "search",
       "states": []
+    },
+    "e_KsH1999": {
+      "editionId": "e_KsH1999",
+      "workId": "w_KsH",
+      "editionIdentifierYear": "1999",
+      "editionCode": "KsH1999",
+      "editionFirstPublicationDate": "1999",
+      "titleProper": "Keystone Harmony",
+      "commonName": "Keystone Harmony",
+      "compiler": "Gabriel Kastelle and Doron A. Henkin",
+      "placePublished": "Philadelphia, PA",
+      "shapeSystem": "4-shape",
+      "badgeColor": "#5b4636",
+      "badgeTextColor": "#fff",
+      "indexStatus": "complete",
+      "ezMinutesVisibility": "search",
+      "tunebookFile": "tunebook-files/KsH1999.json",
+      "states": [],
+      "publicationYear": "1999",
+      "addedIn": "1.7.6",
+      "songs": {
+        "1": {"title":"Rockbridge"},
+        "2t": {"title":"Liberty Hall"},
+        "2b": {"title":"Bethel"},
+        "3": {"title":"Chester"},
+        "4": {"title":"Pennsylvania"},
+        "6": {"title":"Stephens"},
+        "7": {"title":"Hosannah"},
+        "8": {"title":"Redeeming Love"},
+        "9": {"title":"Thirtieth (Golden Hill)"},
+        "10": {"title":"O Turn Ye"},
+        "11": {"title":"Relly's Third"},
+        "12": {"title":"Glastonbury"},
+        "13": {"title":"Bunker Hill"},
+        "14": {"title":"Deluge"},
+        "15": {"title":"Dunlap's Creek"},
+        "16": {"title":"Pennsylvania (new)"},
+        "18": {"title":"Mount Hope"},
+        "20": {"title":"The Lord's Prayer"},
+        "23": {"title":"Kathleen"},
+        "24": {"title":"Kingsfold"},
+        "25": {"title":"Invitation (Supplication)"},
+        "26": {"title":"Hymn of the Dunkers"},
+        "27t": {"title":"Consolation"},
+        "27b": {"title":"Harrisburg"},
+        "28": {"title":"Melody"},
+        "29": {"title":"Willow Grove"},
+        "30t": {"title":"Brier Island"},
+        "30b": {"title":"Forsaken"},
+        "32": {"title":"Thy Will be Done"}
+      },
+      "source": "Level 3 built from Kevin's own copy of the book: its printed alphabetical tune index (title, page, composer, first line, meter, year, verse) plus title/introduction pages. Year column mapped to musicAttribution.year (tune date), Verse column to textAttribution.credit (text/verse source) where present; meters, composer names, and verse-source text kept exactly as printed, including apparent idiosyncrasies (\"C..M.\" for Dunlap's Creek, quoted \"Chapen\" for Hosannah, bracketed \"[A] Chapin\" for Invitation). No timeSignature or key data was printed in the index, so those fields are omitted rather than guessed. Pages 2, 27, and 30 each carry two tunes printed one above the other; top/bottom order confirmed directly by Kevin against the physical book."
     },
     "e_KtH1818": {
       "editionId": "e_KtH1818",
