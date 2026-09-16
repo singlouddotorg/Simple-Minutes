@@ -13,6 +13,7 @@ One HTML file, plus a bundled copy of the shared tunebook library for guaranteed
 | [**Minutes**](https://github.com/singlouddotorg/minutes) | Log a singing as it happens, then turn that log into publishable minutes. |
 | [**Tunebooks**](https://github.com/singlouddotorg/tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. |
 | [**Simple Minutes**](https://github.com/singlouddotorg/simple-minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. |
+| [**Simple Compile**](https://github.com/singlouddotorg/simple-compile) | A one-page, no-editing version of Minutes: open a CSV, get readable minutes back. |
 | [**Tunebook Registry**](https://github.com/singlouddotorg/tunebook-registry) | The published tunebook data the others read. |
 
 ## What it is for
@@ -35,8 +36,13 @@ nothing has to be configured on either side.
    minutes before each one until two minutes after, so a break doesn't slip past while
    you're heads-down logging.
 4. Optionally tick **keep the screen awake**, so the phone doesn't sleep mid-singing.
-5. Tap the number of each song as it is called. `T` and `B` for top and bottom pages.
-6. **Break** marks a recess. **Download CSV** or **Copy CSV** when the singing ends.
+5. Optionally tick **show edition for The Sacred Harp** — both the 1991 and 2025 editions
+   are still in common use, so this spells out "The Sacred Harp: 1991 Edition" instead of
+   the terser "Sacred Harp '91" wherever the book's name is shown as text. Every other book
+   is unaffected. The same option exists in [Minutes](https://github.com/singlouddotorg/minutes) and
+   [Simple Compile](https://github.com/singlouddotorg/simple-compile).
+6. Tap the number of each song as it is called. `T` and `B` for top and bottom pages.
+7. **Break** marks a recess. **Download CSV** or **Copy CSV** when the singing ends.
 
 The current time sits beside the page number you're typing, at the same size, so you can
 check it without leaving the app.

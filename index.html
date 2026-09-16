@@ -363,6 +363,12 @@
     </div>
     <p id="wakeLockNote">Stops the phone sleeping mid-singing, so the clock and any break warning stay visible. Uses more battery.</p>
 
+    <div class="toggle-row">
+      <input type="checkbox" id="shEditionToggle">
+      <label for="shEditionToggle">Show edition for The Sacred Harp</label>
+    </div>
+    <p id="shEditionNote">Shows "The Sacred Harp: 1991 Edition" instead of "Sacred Harp '91" wherever this book's name is shown as text - both editions are still in common use, so this spells out which one for anyone reading later. Only affects The Sacred Harp; every other book is unaffected.</p>
+
     <button type="button" class="btn-primary" id="doneSetupBtn">Done &mdash; start logging</button>
   </div>
 
@@ -475,6 +481,7 @@
   var addBreakBtn = document.getElementById("addBreakBtn");
   var wakeLockToggle = document.getElementById("wakeLockToggle");
   var wakeLockNote = document.getElementById("wakeLockNote");
+  var shEditionToggle = document.getElementById("shEditionToggle");
   var keypad = document.getElementById("keypad");
   var backspaceBtn = document.getElementById("backspaceBtn");
   var breakBtn = document.getElementById("breakBtn");
@@ -688,12 +695,26 @@
     return Object.values(libraryData.editions).find(function(e){ return e.editionCode === abbr; });
   }
 
+  // Kevin's request, 2026-09-16: a "Show edition for The Sacred Harp" toggle, matching the
+  // same option added to the full Minutes app. This app's own commonName field already
+  // tells the 1991 and 2025 editions apart ("Sacred Harp '91" vs "Sacred Harp '25"), so
+  // there's no live ambiguity bug here the way Minutes had - but Kevin wants the same
+  // explicit "spell out which edition" choice available in both apps regardless. When on,
+  // shows the full "The Sacred Harp: 1991 Edition" form instead of the terser common name,
+  // for this one Work only; every other book is unaffected.
+  function bookDisplayName(e){
+    if(shEditionToggle && shEditionToggle.checked && e.isSacredHarpDefault && e.titleProper){
+      return e.titleProper + (e.subtitle ? ": " + e.subtitle : "");
+    }
+    return e.commonName || e.titleProper || e.editionCode;
+  }
+
   function bookRecordFor(abbr){
     var e = editionByAbbr(abbr);
     if(e){
       return {
         abbr: e.editionCode,
-        name: e.commonName || e.titleProper || e.editionCode,
+        name: bookDisplayName(e),
         badgeColor: e.badgeColor || "#d9d9d9",
         badgeTextColor: e.badgeTextColor || "#000000",
         songs: (e.indexStatus === "complete" && e.songs) ? e.songs : null
@@ -723,7 +744,7 @@
       swatch.textContent = e.editionCode;
       var name = document.createElement("span");
       name.className = "name";
-      name.textContent = e.commonName || e.titleProper;
+      name.textContent = bookDisplayName(e);
       row.appendChild(cb);
       row.appendChild(swatch);
       row.appendChild(name);
@@ -804,7 +825,7 @@
       var work = libraryData.works && libraryData.works[e.workId];
       var workName = (work && work.titleProper || "").toLowerCase();
       if(workName && workName === q){
-        matches.push({ abbr: e.editionCode, name: e.commonName || e.titleProper, publicationYear: e.publicationYear });
+        matches.push({ abbr: e.editionCode, name: bookDisplayName(e), publicationYear: e.publicationYear });
       }
     });
     if(matches.length === 1) return matches[0];
@@ -957,6 +978,11 @@
     dateInput.value = saved.date || new Date().toISOString().slice(0,10);
     locationInput.value = saved.location || "";
     presentInput.value = saved.present || "";
+    // Restored before the book rows render below, so the Setup checkboxes and any already-
+    // added search results show the right form of "The Sacred Harp" from the first paint,
+    // not the default that then has to be corrected by a second render.
+    shEditionToggle.checked = !!saved.shEdition;
+    renderCommonBooks();
     selectedAbbrs = saved.selectedAbbrs || [];
     selectedAbbrs.forEach(function(abbr){
       var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
@@ -1049,7 +1075,8 @@
     localStorage.setItem(SETUP_KEY, JSON.stringify({
       event: eventName, date: eventDate, location: eventLocation, present: eventPresent, selectedAbbrs: selectedAbbrs,
       breakTimes: breakTimes.filter(function(t){ return parseBreakTime(t) !== null; }),
-      keepAwake: !!(wakeLockToggle && wakeLockToggle.checked)
+      keepAwake: !!(wakeLockToggle && wakeLockToggle.checked),
+      shEdition: !!(shEditionToggle && shEditionToggle.checked)
     }));
   }
 
@@ -1320,6 +1347,18 @@
   // that has to be a deliberate choice made by the person whose phone it is.
   var wakeLockSupported = ("wakeLock" in navigator) && navigator.wakeLock && typeof navigator.wakeLock.request === "function";
   var wakeLockSentinel = null;
+
+  // Re-render immediately on toggle, same as ticking/unticking a book checkbox already
+  // does - so switching it while still on Setup shows the effect right away, not just after
+  // the next reload.
+  shEditionToggle.addEventListener("change", function(){
+    renderCommonBooks();
+    selectedAbbrs.forEach(function(abbr){
+      var cb = commonBookRow.querySelector('input[value="' + CSS.escape(abbr) + '"]');
+      if(cb) cb.checked = true;
+    });
+    renderBookSearchAdded();
+  });
 
   if(!wakeLockSupported){
     // Say so plainly rather than offering a switch that silently does nothing. The rest of
@@ -1831,7 +1870,7 @@
   // executes an imported file as code, rejects a Library schema it doesn't recognize, and
   // falls back to a bundled copy of tunebook-library.js before ever reaching the manual
   // picker, so the app now works the first time it's ever opened with no signal at all.
-  var SIMPLE_MINUTES_VERSION = "1.5.0"; // 2026-09-11 Four follow-ups to the exceptional-key picker, all on Kevin's own report: (1) "Other pages" is now a pill badge styled with the active book's own badgeColor/badgeTextColor, labeled "OTHER", sitting next to the book's own badge as a matched pair, instead of a plain underlined text link. (2) Book names on the Setup page (the common-book checkboxes and the search-added row) now render exactly as typed in the Library - "Christian Harmony (Carolina Book)", not "CHRISTIAN HARMONY (CAROLINA BOOK)" - fixing an inherited text-transform:uppercase the row's own <label> tag was passing down from this app's generic label styling, which was never meant to touch book titles. (3) The book badge on the song entry page (both the single-book badge and the multi-book picker buttons) now shows the SingLoud edition code (e.g. "HoA1973"), the same identifier Setup's own swatch already shows, instead of the common name - so the two screens identify a book the same way. (4) The picker's T and B keypad slots become "Back" and "Next" whenever there's more than one page of candidates to browse (the "0" slot stays Cancel throughout), replacing the single "More (x/y)" button that used to sit in T's spot alone. // 2026-09-11 Fixed the picker's own sort order, on Kevin's own report from a live screenshot: NHC2001's appendix list showed "a168" before "a20" because it was compared character by character ('1' < '2') rather than by the actual page number. Both "Other pages" and the auto-triggered ambiguity picker now sort with a numeric-aware comparator that splits each key into digit and non-digit runs and compares digit runs by value - plain page-numbered keys first in real page order, then letter-prefixed series like "a1..a63" in real numeric order, then anything with no digit at all. // 2026-09-10 Fixed the keypad's inability to enter a book's non-numeric/non-t-b canonical page or song keys (the release-readiness review's Issue #3), on Kevin's own proposed design: when the digits typed so far are genuinely ambiguous - HoA1973's "22" matches both plain "22" (Sharpsburg) and "22A" (Doxology), two different songs, so guessing would silently log the wrong one - the keypad itself repurposes its own 1-9 buttons into a numbered list of the real candidates, tapped to choose; no new physical buttons, exactly as proposed. A "This page has a top and bottom - tap T or B" prefix that resolves to exactly a t/b pair still gets the old one-line message instead, since T and B are already dedicated buttons. A new "Other pages (N)" link appears next to the book badge whenever the active book has any such keys at all - covering the ones no digit-typing could ever reach in the first place, like CHW2015's roman-numeral front matter (xixA) or NHC2001's lettered appendix series (a1..a63, 44 of them) - and opens the same numbered picker to browse and choose from, paginated 9 at a time. Selecting from the picker always uses the exact canonical Library key verbatim (never a normalized or stripped-down version), so HoA1973's 22 and 22A can never be confused for each other. // 2026-09-10 Dropped "(optional)" from the Number present label, on Kevin's own report: at half-width next to Date, that qualifier wrapped the label to two lines and threw off the alignment the field-row split was meant to produce. One line now, level with Date's own label. Still genuinely optional - nothing about validation changed, just the wording. // 2026-09-10 Setup layout follow-up, on Kevin's own report: four stacked fields read as three now - Location moved up to sit right under Event name, and Date/Number present share one line (a .field-row flex pair, same label/input styling as every other field, just at half width) instead of each taking a full row. Purely visual; nothing about what's stored, validated, or exported changed. // 2026-09-10 Added "Number present (optional)" to Setup, on Kevin's own request: a big turnout one week and a small one two months later is real, useful data (seasonal fluctuation, growth or contraction over time) and there was no practical way to capture it here before. Not a new schema field - meta.present already exists in Schema 5 and Minutes' own Event Details has read, written, and optionally printed it ("62 singers were present") for a long time; Simple Minutes just never surfaced a field for it. Lives in Setup right after Location, persists and reloads the same way Event/Date/Location already do, and rides into the exported CSV as a genuine meta.present metadata row - present only when a number was actually entered, and blank on every real Event/Date/Location/officer/Series column on that row, matching Minutes' own metaRow() convention exactly (RC4-01) so a reimport can never mistake it for a second session. // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
+  var SIMPLE_MINUTES_VERSION = "1.6.0"; // 2026-09-16 Added a "Show edition for The Sacred Harp" toggle to Setup, on Kevin's own request ("That option should be in Minutes and Simple Minutes") - matching the same option added to the full Minutes app and to the new Simple Compile. Both the 1991 and 2025 editions of The Sacred Harp are still in common use; this app's own commonName field already told them apart ("Sacred Harp '91" vs "Sacred Harp '25"), so there was no live ambiguity bug here the way Minutes had, but the same explicit choice is now available regardless. When on, shows the full "The Sacred Harp: 1991 Edition" form instead of the terser common name, everywhere this book's name appears as text (the Setup checkbox row, a book added by search, an ambiguous-Work choice) - every other book is unaffected. Persists with the rest of Setup, the same way the wake-lock preference already does. // 2026-09-11 Four follow-ups to the exceptional-key picker, all on Kevin's own report: (1) "Other pages" is now a pill badge styled with the active book's own badgeColor/badgeTextColor, labeled "OTHER", sitting next to the book's own badge as a matched pair, instead of a plain underlined text link. (2) Book names on the Setup page (the common-book checkboxes and the search-added row) now render exactly as typed in the Library - "Christian Harmony (Carolina Book)", not "CHRISTIAN HARMONY (CAROLINA BOOK)" - fixing an inherited text-transform:uppercase the row's own <label> tag was passing down from this app's generic label styling, which was never meant to touch book titles. (3) The book badge on the song entry page (both the single-book badge and the multi-book picker buttons) now shows the SingLoud edition code (e.g. "HoA1973"), the same identifier Setup's own swatch already shows, instead of the common name - so the two screens identify a book the same way. (4) The picker's T and B keypad slots become "Back" and "Next" whenever there's more than one page of candidates to browse (the "0" slot stays Cancel throughout), replacing the single "More (x/y)" button that used to sit in T's spot alone. // 2026-09-11 Fixed the picker's own sort order, on Kevin's own report from a live screenshot: NHC2001's appendix list showed "a168" before "a20" because it was compared character by character ('1' < '2') rather than by the actual page number. Both "Other pages" and the auto-triggered ambiguity picker now sort with a numeric-aware comparator that splits each key into digit and non-digit runs and compares digit runs by value - plain page-numbered keys first in real page order, then letter-prefixed series like "a1..a63" in real numeric order, then anything with no digit at all. // 2026-09-10 Fixed the keypad's inability to enter a book's non-numeric/non-t-b canonical page or song keys (the release-readiness review's Issue #3), on Kevin's own proposed design: when the digits typed so far are genuinely ambiguous - HoA1973's "22" matches both plain "22" (Sharpsburg) and "22A" (Doxology), two different songs, so guessing would silently log the wrong one - the keypad itself repurposes its own 1-9 buttons into a numbered list of the real candidates, tapped to choose; no new physical buttons, exactly as proposed. A "This page has a top and bottom - tap T or B" prefix that resolves to exactly a t/b pair still gets the old one-line message instead, since T and B are already dedicated buttons. A new "Other pages (N)" link appears next to the book badge whenever the active book has any such keys at all - covering the ones no digit-typing could ever reach in the first place, like CHW2015's roman-numeral front matter (xixA) or NHC2001's lettered appendix series (a1..a63, 44 of them) - and opens the same numbered picker to browse and choose from, paginated 9 at a time. Selecting from the picker always uses the exact canonical Library key verbatim (never a normalized or stripped-down version), so HoA1973's 22 and 22A can never be confused for each other. // 2026-09-10 Dropped "(optional)" from the Number present label, on Kevin's own report: at half-width next to Date, that qualifier wrapped the label to two lines and threw off the alignment the field-row split was meant to produce. One line now, level with Date's own label. Still genuinely optional - nothing about validation changed, just the wording. // 2026-09-10 Setup layout follow-up, on Kevin's own report: four stacked fields read as three now - Location moved up to sit right under Event name, and Date/Number present share one line (a .field-row flex pair, same label/input styling as every other field, just at half width) instead of each taking a full row. Purely visual; nothing about what's stored, validated, or exported changed. // 2026-09-10 Added "Number present (optional)" to Setup, on Kevin's own request: a big turnout one week and a small one two months later is real, useful data (seasonal fluctuation, growth or contraction over time) and there was no practical way to capture it here before. Not a new schema field - meta.present already exists in Schema 5 and Minutes' own Event Details has read, written, and optionally printed it ("62 singers were present") for a long time; Simple Minutes just never surfaced a field for it. Lives in Setup right after Location, persists and reloads the same way Event/Date/Location already do, and rides into the exported CSV as a genuine meta.present metadata row - present only when a number was actually entered, and blank on every real Event/Date/Location/officer/Series column on that row, matching Minutes' own metaRow() convention exactly (RC4-01) so a reimport can never mistake it for a second session. // 2026-09-08 "Search for another book" now actually searches the loaded Library live as you type, instead of the dead master-list lookup it silently never had - click a match to add it, or keep typing a genuine one-off source (e.g. a Christmas packet) and it's added as-is; anything added this way now shows in its own confirmation row with a swatch and a remove button, so there's never a silent add. The break clock's warning pulse now triples in speed for the one minute immediately before and after the projected break, on top of the existing slower pre/post warning window. Added a Share button (next to Copy/Download) that hands the exported CSV straight to Messages, Mail, AirDrop, or Files via the Web Share API on browsers that support sharing files - feature-detected and hidden entirely elsewhere, since iOS Safari's plain download often just opens the CSV in a new tab with nowhere obvious to send it.
   var versionFooterEl = document.getElementById("versionFooter");
   if(versionFooterEl){
     versionFooterEl.textContent = "Simple Minutes \u00b7 Version " + SIMPLE_MINUTES_VERSION +
