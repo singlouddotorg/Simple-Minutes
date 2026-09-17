@@ -1,5 +1,7 @@
 # Simple Minutes
 
+**Version 1.0** — a stable, released app.
+
 A phone-sized logger for a regular singing: page numbers only, no leader names, no officers,
 no sessions. Open it, pick a book, and tap numbers on a keypad as songs are called.
 
@@ -8,13 +10,13 @@ One HTML file, plus a bundled copy of the shared tunebook library for guaranteed
 
 ## Part of the Sing Loud Suite
 
-| App | What it does |
-|---|---|
-| [**Minutes**](https://github.com/singlouddotorg/minutes) | Log a singing as it happens, then turn that log into publishable minutes. |
-| [**Tunebooks**](https://github.com/singlouddotorg/tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. |
-| [**Simple Minutes**](https://github.com/singlouddotorg/simple-minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. |
-| [**Simple Compile**](https://github.com/singlouddotorg/simple-compile) | A one-page, no-editing version of Minutes: open a CSV, get readable minutes back. |
-| [**Tunebook Registry**](https://github.com/singlouddotorg/tunebook-registry) | The published tunebook data the others read. |
+| App | What it does | Status |
+|---|---|---|
+| [**Minutes**](https://github.com/singlouddotorg/minutes) | Log a singing as it happens, then turn that log into publishable minutes. | Beta |
+| [**Tunebooks**](https://github.com/singlouddotorg/tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. | Beta |
+| [**Simple Minutes**](https://github.com/singlouddotorg/simple-minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. | 1.0 release |
+| [**Simple Compile**](https://github.com/singlouddotorg/simple-compile) | A one-page, no-editing version of Minutes: open a CSV, get readable minutes back. | 1.0 release |
+| [**Tunebook Registry**](https://github.com/singlouddotorg/tunebook-registry) | The published tunebook data the others read. | 1.0 release |
 
 ## What it is for
 
@@ -31,18 +33,19 @@ nothing has to be configured on either side.
 ## Using it
 
 1. Open `index.html` on the phone.
-2. Fill in event, date and location once, and pick a songbook.
+2. Fill in event, date and location, and pick a songbook. None of this is locked in — tap
+   **Edit setup** at any point during the singing to fix or change any of it, including
+   which books are selected, without disturbing anything already logged.
 3. Optionally set **expected break times** — the clock turns red and pulses from five
    minutes before each one until two minutes after, so a break doesn't slip past while
    you're heads-down logging.
 4. Optionally tick **keep the screen awake**, so the phone doesn't sleep mid-singing.
-5. Optionally tick **show edition for The Sacred Harp** — both the 1991 and 2025 editions
-   are still in common use, so this spells out "The Sacred Harp: 1991 Edition" instead of
-   the terser "Sacred Harp '91" wherever the book's name is shown as text. Every other book
-   is unaffected. The same option exists in [Minutes](https://github.com/singlouddotorg/minutes) and
-   [Simple Compile](https://github.com/singlouddotorg/simple-compile).
-6. Tap the number of each song as it is called. `T` and `B` for top and bottom pages.
-7. **Break** marks a recess. **Download CSV** or **Copy CSV** when the singing ends.
+5. Tap the number of each song as it is called. `T` and `B` for top and bottom pages.
+6. **Break** marks a recess. **Download CSV** or **Copy CSV** when the singing ends.
+7. Open that file in [Simple Compile](https://github.com/singlouddotorg/simple-compile) or
+   the full [Minutes](https://github.com/singlouddotorg/minutes) app to turn it into
+   actual, readable minutes — a Simple Minutes CSV on its own is page numbers and
+   timestamps, not something to hand to the rest of the class.
 
 The current time sits beside the page number you're typing, at the same size, so you can
 check it without leaving the app.

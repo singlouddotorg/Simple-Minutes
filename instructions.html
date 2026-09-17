@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Minutes :: Instructions</title>
+<!-- Deliberately no external fonts or CDN scripts — everything on this page works fully
+     offline, same as the app itself. Palette and brand mark match simple-minutes.html
+     exactly (--oxblood, --paper/--paper-dark, the four-shape mark), so this reads as the
+     same app's own help page rather than a bolted-on document. -->
+<style>
+  :root{
+    --paper:#fffdf8; --paper-dark:#f6f0e2; --ink:#241f1a; --ink-soft:#6b5f4d;
+    --ink-faint:#a89a80; --oxblood:#8a2e2e; --line:#e1d5b8; --line2:#e8ddc2;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --serif: 'Spectral', Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  html, body{ margin:0; padding:0; background:var(--paper-dark); color:var(--ink); font-family:var(--sans); line-height:1.6; }
+  .wrap{ max-width:640px; margin:0 auto; padding:16px 16px 40px; }
+
+  .suite-brand{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .suite-brand .shapes{ display:flex; gap:5px; }
+  .suite-brand h1{ font-family:var(--serif); font-weight:600; font-size:20px; letter-spacing:.01em; margin:0; }
+  .suite-nav{ margin:0 0 18px; font-size:12.5px; }
+  .suite-nav a{ color:var(--ink-soft); text-decoration:none; font-weight:600; }
+  .suite-nav a:hover{ color:var(--oxblood); }
+
+  .intro{ color:var(--ink-soft); font-size:14.5px; margin:0 0 20px; }
+  h2{
+    font-family:var(--serif); font-weight:600; font-size:18px; margin:30px 0 10px;
+    padding-bottom:6px; border-bottom:1px solid var(--line2); color:var(--ink);
+  }
+  h2:first-of-type{ margin-top:0; }
+  h3{ font-family:var(--serif); font-weight:600; font-size:15px; margin:16px 0 6px; }
+  p, li{ font-size:14px; color:var(--ink); }
+  ul, ol{ padding-left:22px; }
+  li{ margin-bottom:5px; }
+  code{
+    font-family:'Roboto Mono', monospace; background:var(--paper); border:1px solid var(--line2);
+    border-radius:3px; padding:1px 5px; font-size:12.5px;
+  }
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .note{
+    background:var(--paper); border:1px solid var(--line2); border-left:3px solid var(--oxblood);
+    border-radius:0 8px 8px 0; padding:12px 16px; margin:14px 0; font-size:13.5px; color:var(--ink-soft);
+  }
+  table{ border-collapse:collapse; width:100%; margin:10px 0; font-size:13px; }
+  th, td{ text-align:left; padding:6px 10px; border-bottom:1px solid var(--line2); vertical-align:top; }
+  th{ color:var(--ink-soft); font-weight:600; font-size:12px; }
+  .keycap{
+    display:inline-block; min-width:20px; text-align:center; font-family:'Roboto Mono', monospace;
+    background:var(--paper-dark); border:1px solid var(--line); border-radius:4px; padding:1px 6px;
+    font-size:12.5px; font-weight:600;
+  }
+  footer{
+    margin-top:32px; padding-top:14px; border-top:1px solid var(--line2);
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center;
+    font-family:var(--sans); font-size:11px; color:var(--ink-faint);
+  }
+  footer a{ color:var(--ink-faint); text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="suite-brand">
+    <span class="shapes" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><polygon points="12,3 21,20 3,20"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><rect x="4" y="4" width="16" height="16"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><polygon points="12,2 22,12 12,22 2,12"/></svg>
+    </span>
+    <h1>Simple Minutes</h1>
+  </div>
+  <nav class="suite-nav"><a href="index.html">&larr; Back to Simple Minutes</a></nav>
+
+  <p class="intro">A phone-sized logger for a regular singing: pick a book, tap the page number of each song as it's called, download or copy the file when you're done. This page covers the whole thing, plus a few features worth knowing about along the way.</p>
+
+  <h2>Quick Start</h2>
+  <div class="card">
+    <ol>
+      <li>Open Simple Minutes on your phone, ideally before the singing starts.</li>
+      <li>Fill in the event, date, and location, and pick a songbook.</li>
+      <li>Tap the page number of each song as it's called, then <strong>Done</strong>.</li>
+      <li>Tap <strong>Break</strong> for a recess.</li>
+      <li>When the singing ends, <strong>Download CSV</strong> or <strong>Copy CSV</strong>.</li>
+      <li>Open that file in <a href="https://singlouddotorg.github.io/simple-compile/" target="_blank" rel="noopener">Simple Compile</a> or the full <a href="https://singlouddotorg.github.io/minutes/" target="_blank" rel="noopener">Minutes</a> app to turn it into real, readable minutes to share.</li>
+    </ol>
+  </div>
+
+  <h2>Setting Up</h2>
+  <ul>
+    <li>Fill in <strong>Event</strong>, <strong>Date</strong>, <strong>Location</strong>, and <strong>Number Present</strong> to get started. None of it is locked in — tap <strong>Edit setup</strong> at any point during the singing to fix a typo, add the location if it wasn't decided yet, update the head count, or change which books are selected, then pick right back up logging songs. Nothing already logged is affected by an edit here.</li>
+    <li>Pick a songbook from the list. If it isn't in the visible list, use the search field — Simple Minutes knows a large and growing number of tunebooks (see "Where the songbook data comes from," below), most of which stay tucked behind search since any one singing only ever needs a couple of them.</li>
+    <li>Optional: set <strong>expected break times</strong>. The clock turns red and pulses starting five minutes before each one and for two minutes after, so a break doesn't slip past unnoticed while you're heads-down logging songs.</li>
+    <li>Optional: tick <strong>keep the screen awake</strong>, so the phone doesn't lock mid-singing and force you to unlock it one-handed between songs.</li>
+  </ul>
+
+  <h2>Logging Songs</h2>
+  <ul>
+    <li>Tap the number of each song's page on the keypad, then <strong>Done</strong>. The current time sits right beside the number you're typing, at the same size, so you never have to leave the keypad just to check it.</li>
+    <li>Some pages carry two songs, one above the other — the keypad prompts <span class="keycap">T</span> or <span class="keycap">B</span> for those, rather than guessing which one was meant.</li>
+    <li>Tapping a page that's already been logged once today flags it — "Already logged once today" — instead of quietly logging a second copy. That catches an accidental repeat in the moment, rather than leaving it to be spotted later in the finished minutes.</li>
+    <li>Typing a number the book's own index has no song at all — a mistyped page, or a genuinely blank one — isn't accepted quietly either. A second tap of Done ("Add anyway") logs it, so a typo doesn't slip into the record unnoticed.</li>
+    <li>A few books number some pages outside the ordinary page-plus-top/bottom pattern — roman numerals in the front matter, a lettered appendix, or two different songs sharing one printed number. Any book like that shows an <strong>OTHER</strong> badge next to its name; tapping it turns the keypad into a plain numbered list of those real pages instead, so they're just as loggable as an ordinary page and always recorded exactly as printed.</li>
+    <li>Tap <strong>Break</strong> to mark a recess.</li>
+  </ul>
+  <div class="note">Simple Minutes never asks who led a song — that's the entire point of it. When the finished log opens in Simple Compile or the full Minutes app, that absence is detected automatically, and the minutes come out reading as prose about <em>what was sung</em>, rather than repeating "the leader" once per song. Nothing has to be set on either side for that to happen.</div>
+
+  <h2>Correcting a Mistake</h2>
+  <p>Tap any already-logged song in the list to edit it in place. The same page checks — top/bottom prompts, the already-logged flag, the confirm-to-add step for an unrecognized page — apply to an edit exactly as they do to a new entry.</p>
+  <p>For anything about the singing itself — event name, date, location, number present, which books are selected, or break times — tap <strong>Edit setup</strong>. It's available the whole time you're logging, not just before the first song, and going back into it never disturbs anything already logged.</p>
+
+  <h2>Finishing Up</h2>
+  <ul>
+    <li><strong>Download CSV</strong> saves the file to the phone's own Downloads (or equivalent) folder.</li>
+    <li><strong>Copy CSV</strong> puts the same content on the clipboard, ready to paste into an email or message.</li>
+    <li>Either one is a genuine, complete <a href="https://github.com/singlouddotorg/minutes/blob/main/SCHEMA-5.md" target="_blank" rel="noopener">Schema 5</a> Singing Record — the same format the full Minutes app produces.</li>
+  </ul>
+  <div class="note">A Simple Minutes CSV isn't meant to be read on its own — it's page numbers and timestamps, not finished minutes. The real last step is opening that file in <a href="https://singlouddotorg.github.io/simple-compile/" target="_blank" rel="noopener">Simple Compile</a> or the full <a href="https://singlouddotorg.github.io/minutes/" target="_blank" rel="noopener">Minutes</a> app, either of which turns it into an actual narrative write-up (or the SHMHA Minutes Book format, or a terse scan list) ready to send to the rest of the class. Simple Compile is the quicker of the two for this — open the file, pick an output, copy or share the result — since it has nothing to fix up first; use the full Minutes app instead if something in the file genuinely needs correcting.</div>
+
+  <h2>Saving and Backups</h2>
+  <ul>
+    <li>The log saves to this browser automatically as you go — no action needed, and no separate "save" button to remember.</li>
+    <li>Refreshing or closing the tab by accident and reopening on the same phone and browser restores exactly where you left off — the event details, the book, and everything logged so far.</li>
+    <li>Local saving isn't a substitute for a real backup — download or copy the file once the singing ends, and don't close the tab until you've done one or the other.</li>
+  </ul>
+
+  <h2>Where the Songbook Data Comes From</h2>
+  <p>On opening, Simple Minutes first tries fetching the current tunebook list from the <a href="https://github.com/singlouddotorg/tunebook-registry" target="_blank" rel="noopener">Tunebook Registry</a>, so it has the latest book list whenever a connection is available. If that fails — no signal at the venue, a blocked connection, or simply the very first time this tool is ever opened — it falls back immediately to the copy bundled right beside the app itself, with no prompt or picker in the way. Either way, that file is only ever read as data, never run as code.</p>
+
+  <h2>Everything Stays on the Phone</h2>
+  <p>No singing data is ever sent anywhere. The log lives in this browser until you download or copy it yourself; the only network request Simple Minutes ever makes is the one read-only fetch of the current tunebook list, described above.</p>
+
+  <h2>Troubleshooting</h2>
+  <h3>A page I typed shows the wrong song, or no song at all</h3>
+  <p>Double-check the book selected at setup — song numbering is specific to the edition, and two editions of a similarly-named book can number the same page differently. If the book genuinely has no song at that page, "Add anyway" logs it as typed rather than blocking it outright.</p>
+  <h3>I can't find a book in the list</h3>
+  <p>Use the search field rather than scrolling — most books Simple Minutes knows about are reachable only by searching, since any one singing only needs a couple of them visible at once. If it's genuinely missing altogether, write to <a href="mailto:sacredharpbiblio@gmail.com">sacredharpbiblio@gmail.com</a>.</p>
+  <h3>The clock isn't warning me about a break</h3>
+  <p>Check that an expected break time was actually entered — tap <strong>Edit setup</strong> to add or fix one at any point, even mid-singing. The warning starts five minutes early and clears two minutes after the time entered.</p>
+  <h3>My phone went to sleep and I lost my place</h3>
+  <p>Nothing is lost — the log autosaves continuously, so reopening the tab restores it exactly. Turning on "keep the screen awake" at setup prevents the phone from sleeping in the first place.</p>
+  <h3>I need to fix a name, or this needs real editing</h3>
+  <p>Simple Minutes doesn't record names at all, and has no editing beyond correcting a page number in place. Open the exported file in the full <a href="https://github.com/singlouddotorg/minutes" target="_blank" rel="noopener">Minutes</a> app for anything beyond that.</p>
+
+  <h2>Version</h2>
+  <!-- Simple Minutes carries its own version constant inline (SIMPLE_MINUTES_VERSION,
+       in simple-minutes.html) rather than in a separate version file, so unlike Minutes'
+       own instructions.html this can't script-import it live. Update this line by hand
+       when that constant changes. -->
+  <p>Simple Minutes &middot; Version 1.0.0</p>
+
+  <footer>
+    <a href="index.html">Home</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="https://github.com/singlouddotorg/simple-minutes" target="_blank" rel="noopener">Source</a>
+  </footer>
+  <p style="text-align:center;font-size:10px;color:var(--ink-faint);margin:6px 0 0;">A project of SingLoud.org</p>
+</div>
+</body>
+</html>
