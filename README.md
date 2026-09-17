@@ -1,4 +1,4 @@
-# Simple Minutes
+# Capture
 
 **Version 1.0** — a stable, released app.
 
@@ -14,15 +14,16 @@ One HTML file, plus a bundled copy of the shared tunebook library for guaranteed
 |---|---|---|
 | [**Minutes**](https://github.com/singlouddotorg/minutes) | Log a singing as it happens, then turn that log into publishable minutes. | Beta |
 | [**Tunebooks**](https://github.com/singlouddotorg/tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. | Beta |
-| [**Simple Minutes**](https://github.com/singlouddotorg/simple-minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. | 1.0 release |
-| [**Simple Compile**](https://github.com/singlouddotorg/simple-compile) | A one-page, no-editing version of Minutes: open a CSV, get readable minutes back. | 1.0 release |
-| [**Tunebook Registry**](https://github.com/singlouddotorg/tunebook-registry) | The published tunebook data the others read. | 1.0 release |
+| [**Capture**](https://github.com/singlouddotorg/Simple-Minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. | 1.0 release |
+| [**Compile**](https://github.com/singlouddotorg/Simple-Compile) | A one-page, no-editing version of Minutes: open a CSV, get readable minutes back. | 1.0 release |
+| [**Singing Ledger**](https://github.com/singlouddotorg/Ledger) | Combines many finished singings into one master record and set of totals. | New (0.1) |
+| [**Tunebook Registry**](https://github.com/singlouddotorg/Tunebook-Registry) | The published tunebook data the others read. | 1.0 release |
 
 ## What it is for
 
 The deliberately narrow case: a weeknight sing where somebody wants a record of what was
 sung, and nobody is going to type names into a phone all evening. It writes a real
-[Schema 5](https://github.com/singlouddotorg/minutes/blob/main/SCHEMA-5.md) Singing Record — the same format the full
+[Schema 5](https://github.com/singlouddotorg/Secretary/blob/main/SCHEMA-5.md) Singing Record — the same format the full
 Minutes app uses — so a night's log opens straight into Minutes for compiling into
 publishable minutes.
 
@@ -42,9 +43,9 @@ nothing has to be configured on either side.
 4. Optionally tick **keep the screen awake**, so the phone doesn't sleep mid-singing.
 5. Tap the number of each song as it is called. `T` and `B` for top and bottom pages.
 6. **Break** marks a recess. **Download CSV** or **Copy CSV** when the singing ends.
-7. Open that file in [Simple Compile](https://github.com/singlouddotorg/simple-compile) or
-   the full [Minutes](https://github.com/singlouddotorg/minutes) app to turn it into
-   actual, readable minutes — a Simple Minutes CSV on its own is page numbers and
+7. Open that file in [Compile](https://github.com/singlouddotorg/Simple-Compile) or
+   the full [Minutes](https://github.com/singlouddotorg/Secretary) app to turn it into
+   actual, readable minutes — a Capture CSV on its own is page numbers and
    timestamps, not something to hand to the rest of the class.
 
 The current time sits beside the page number you're typing, at the same size, so you can
@@ -76,7 +77,7 @@ uses — nothing to turn on, nothing to configure:
 ## Where the songbook data comes from
 
 On opening, the app first tries fetching `tunebook-library.js` from the
-[Tunebook Registry](https://github.com/singlouddotorg/tunebook-registry), so it has the current book list when a
+[Tunebook Registry](https://github.com/singlouddotorg/Tunebook-Registry), so it has the current book list when a
 connection is available. If that fails for any reason — no signal at the venue, a blocked
 connection, a privacy extension, or simply the very first time this tool is ever opened —
 it falls back to the copy of `tunebook-library.js` bundled right beside `index.html`, with
@@ -89,7 +90,7 @@ never executed as code; it's read strictly as data, the same safeguard Tunebooks
 ## Everything stays on the phone
 
 No singing data is ever sent anywhere — the log saves to browser storage as you go, and no
-file is written until you actually tap Download or Copy. When online, Simple Minutes may
+file is written until you actually tap Download or Copy. When online, Capture may
 make a single, read-only request for the current Tunebook Library, described above.
 
 ## Tests

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Simple Minutes</title>
+<title>Capture</title>
 <!-- Standalone, mobile-first "just numbers" song logger, reviving the concept from an
      earlier "Simple EZ Minutes" tool built against a much older version of this suite
      (before tunebook-library.js, Schema 5, and the current app's officer/session model
@@ -303,7 +303,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><rect x="4" y="4" width="16" height="16"/></svg>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a2e2e" stroke-width="2"><polygon points="12,2 22,12 12,22 2,12"/></svg>
     </span>
-    <h1>Simple Minutes</h1>
+    <h1>Capture</h1>
     <a href="instructions.html" style="margin-left:auto; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none;">Instructions</a>
   </div>
 
@@ -492,7 +492,7 @@
   // so this fetch() succeeds cross-origin same as it would same-origin. This is the exact
   // same tunebook-library.js the Tunebook Registry itself uses, not a separate copy this
   // tool would otherwise need to keep manually synced.
-  var LIBRARY_FETCH_URL = "https://raw.githubusercontent.com/singlouddotorg/tunebook-registry/main/tunebook-library.js";
+  var LIBRARY_FETCH_URL = "https://raw.githubusercontent.com/singlouddotorg/Tunebook-Registry/main/tunebook-library.js";
   var LIBRARY_FETCH_TIMEOUT_MS = 4000;
 
   // A structural format version for tunebook-library.js itself - distinct from this
@@ -509,7 +509,7 @@
     var isNewer = v && !isNaN(vNum) && vNum > highestKnown;
     var shown = (v === undefined || v === null || v === "") ? "(none)" : JSON.stringify(v);
     return isNewer
-      ? "This Tunebook Library uses schema " + v + ", but this version of Simple Minutes understands schema " + highestKnown + ". Update Simple Minutes, or use a compatible local Library."
+      ? "This Tunebook Library uses schema " + v + ", but this version of Capture understands schema " + highestKnown + ". Update Capture, or use a compatible local Library."
       : "This Tunebook Library's schemaVersion (" + shown + ") isn\u2019t one this build recognizes (expected " + highestKnown + ") \u2014 refusing to load it, since there\u2019s no way to know what it actually contains.";
   }
 
@@ -1842,10 +1842,10 @@
   // toggle, and the release-readiness fixes to the Library loader's offline fallback. None
   // of that is "prior version" behavior a released 1.0 needs to account for; this app has
   // one released version, described in full in README.md.
-  var SIMPLE_MINUTES_VERSION = "1.0.0";
+  var SIMPLE_MINUTES_VERSION = "1.0.1";
   var versionFooterEl = document.getElementById("versionFooter");
   if(versionFooterEl){
-    versionFooterEl.textContent = "Simple Minutes \u00b7 Version " + SIMPLE_MINUTES_VERSION +
+    versionFooterEl.textContent = "SingLoud.org Shape-Note Simple Secretary: Capture \u00b7 Version " + SIMPLE_MINUTES_VERSION +
       " \u00b7 Schema " + "5";
   }
 
@@ -1944,7 +1944,7 @@
   shareBtn.addEventListener("click", function(){
     var csv = buildCsv();
     var file = new File([csv], slugify(eventName) + "-" + eventDate + ".csv", { type: "text/csv" });
-    navigator.share({ files: [file], title: eventName || "Simple Minutes log" }).catch(function(err){
+    navigator.share({ files: [file], title: eventName || "Capture log" }).catch(function(err){
       // Backing out of the share sheet throws AbortError - that's a genuine, ordinary
       // "changed my mind," not a failure worth a message. Anything else gets a plain
       // fallback pointer, since Copy and Download are both sitting right below this.
