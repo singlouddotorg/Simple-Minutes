@@ -12,10 +12,10 @@ One HTML file, plus a bundled copy of the shared tunebook library for guaranteed
 
 | App | What it does | Status |
 |---|---|---|
-| [**Minutes**](https://github.com/singlouddotorg/minutes) | Log a singing as it happens, then turn that log into publishable minutes. | Beta |
-| [**Tunebooks**](https://github.com/singlouddotorg/tunebooks) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. | Beta |
-| [**Capture**](https://github.com/singlouddotorg/Simple-Minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Minutes. | 1.0 release |
-| [**Compile**](https://github.com/singlouddotorg/Simple-Compile) | A one-page, no-editing version of Minutes: open a CSV, get readable minutes back. | 1.0 release |
+| [**Secretary**](https://github.com/singlouddotorg/Secretary) | Log a singing as it happens, then turn that log into publishable minutes. | Beta |
+| [**Bibliographer**](https://github.com/singlouddotorg/Bibliographer) | Curate the shared tunebook data — editions, page indexes, Level 3 scholarly files. | Beta |
+| [**Capture**](https://github.com/singlouddotorg/Simple-Minutes) | A phone-sized logger: page numbers only, no names. Its files import straight into Secretary. | 1.0 release |
+| [**Compile**](https://github.com/singlouddotorg/Simple-Compile) | A one-page, no-editing version of Secretary: open a CSV, get readable minutes back. | 1.0 release |
 | [**Singing Ledger**](https://github.com/singlouddotorg/Ledger) | Combines many finished singings into one master record and set of totals. | New (0.1) |
 | [**Tunebook Registry**](https://github.com/singlouddotorg/Tunebook-Registry) | The published tunebook data the others read. | 1.0 release |
 
@@ -24,10 +24,10 @@ One HTML file, plus a bundled copy of the shared tunebook library for guaranteed
 The deliberately narrow case: a weeknight sing where somebody wants a record of what was
 sung, and nobody is going to type names into a phone all evening. It writes a real
 [Schema 5](https://github.com/singlouddotorg/Secretary/blob/main/SCHEMA-5.md) Singing Record — the same format the full
-Minutes app uses — so a night's log opens straight into Minutes for compiling into
+Secretary app uses — so a night's log opens straight into Secretary for compiling into
 publishable minutes.
 
-Because it records no leader names, Minutes notices that on import and writes the minutes as
+Because it records no leader names, Secretary notices that on import and writes the minutes as
 prose about **what was sung** rather than "the leader" once per song. That is automatic;
 nothing has to be configured on either side.
 
@@ -44,7 +44,7 @@ nothing has to be configured on either side.
 5. Tap the number of each song as it is called. `T` and `B` for top and bottom pages.
 6. **Break** marks a recess. **Download CSV** or **Copy CSV** when the singing ends.
 7. Open that file in [Compile](https://github.com/singlouddotorg/Simple-Compile) or
-   the full [Minutes](https://github.com/singlouddotorg/Secretary) app to turn it into
+   the full [Secretary](https://github.com/singlouddotorg/Secretary) app to turn it into
    actual, readable minutes — a Capture CSV on its own is page numbers and
    timestamps, not something to hand to the rest of the class.
 
@@ -85,7 +85,7 @@ no picker or prompt in the way. The manual file picker is a last resort, for the
 where even the bundled copy is somehow missing.
 
 That fetch is the app's only network request. The library file — bundled or fetched — is
-never executed as code; it's read strictly as data, the same safeguard Tunebooks uses.
+never executed as code; it's read strictly as data, the same safeguard Bibliographer uses.
 
 ## Everything stays on the phone
 
@@ -99,9 +99,9 @@ make a single, read-only request for the current Tunebook Library, described abo
 cd tests/live && npm install playwright
 node t6-simple-minutes-clock.js     # the clock
 node t7-break-warnings.js           # break warnings and the wake lock
-node gen-simple-minutes-fixture.js  # regenerate the export fixture Minutes tests against
+node gen-simple-minutes-fixture.js  # regenerate the export fixture Secretary tests against
 ```
 
-The fixture that last script produces is what the Minutes repository uses to test the import
+The fixture that last script produces is what the Secretary repository uses to test the import
 contract between the two apps. If this app's export format changes, regenerate it here and
 copy it across.

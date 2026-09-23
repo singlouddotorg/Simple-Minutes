@@ -15,7 +15,7 @@
      Deliberately narrow scope, matching Kevin's own original request: event/date/location
      once, pick a book, then log songs by number alone with a phone-pad layout (1-9, then
      t/0/b) - no leader names, no notes, no tags, no multi-session, no officers. The output
-     is still a real, genuine Schema 5 CSV the full Minutes app can import directly -
+     is still a real, genuine Schema 5 CSV the full Secretary app can import directly -
      confirmed live before shipping this - with Leader(s) simply blank on every row, which
      the real app already handles cleanly with its own "(leader not recorded)" fallback,
      not a gap this tool needs to work around.
@@ -28,8 +28,8 @@
      fetch had a chance to cache anything - reached only the manual file picker, with no
      book anyone could select without going and finding a copy of tunebook-library.js
      themselves. This package now ships its own copy of that same file
-     (tunebook-library.js, loaded as an ordinary <script> tag below, same as Minutes and
-     Tunebooks already do) purely as an offline fallback: the Registry fetch is still tried
+     (tunebook-library.js, loaded as an ordinary <script> tag below, same as Secretary and
+     Bibliographer already do) purely as an offline fallback: the Registry fetch is still tried
      first, since it may be more current, but a failed or timed-out fetch now falls back to
      this bundled copy before ever reaching the manual picker, and only falls all the way
      through to that picker if the bundled copy is somehow missing or invalid too. Verified
@@ -54,7 +54,7 @@
      incompatible Library shape is refused with a clear message rather than silently
      misread.
 
-     Saving: matches the main Minutes app's own real approach exactly (silent, immediate
+     Saving: matches the main Secretary app's own real approach exactly (silent, immediate
      localStorage persistence on every change, a passive "Saved locally at..." status
      line, a clear error message if the save itself ever fails) rather than this tool's
      own earlier, separate "autosave every 10 minutes" idea, which downloaded a real file
@@ -63,7 +63,7 @@
      that settled it here too. Download/Copy stay as the real, standing export actions -
      no file is ever written until one of those is actually tapped.
 
-     Clock: Kevin's own point, and a real asymmetry - at a laptop running the full Minutes
+     Clock: Kevin's own point, and a real asymmetry - at a laptop running the full Secretary
      app the time is already on screen in the menu bar, but on a phone checking it means
      leaving this app mid-number and coming back to the keypad. A secretary needs the time
      for ordinary reasons (when the class recessed, when it resumed, what to write on a
@@ -135,10 +135,10 @@
   html, body{ margin:0; padding:0; background:var(--paper-dark); color:var(--ink); font-family:var(--sans); }
   body{ min-height:100vh; padding-bottom:24px; }
   .wrap{ max-width:480px; margin:0 auto; padding:16px; }
-  /* Same brand mark as the rest of the suite (Minutes' rail, the Registry's header): the
+  /* Same brand mark as the rest of the suite (Secretary's rail, the Registry's header): the
      four shapes plus the serif wordmark, so Simple Minutes reads as part of the family
      rather than a standalone tool. Colored with this app's own --oxblood, matching the
-     Registry's light-background header rather than Minutes' gold-on-dark rail. */
+     Registry's light-background header rather than Secretary's gold-on-dark rail. */
   .suite-brand{ display:flex; align-items:center; gap:8px; margin-bottom:18px; }
   .suite-brand .shapes{ display:flex; gap:5px; }
   .suite-brand h1{ font-family:var(--serif); font-weight:600; font-size:20px; letter-spacing:.01em; margin:0; }
@@ -411,14 +411,14 @@
   <!-- Simple Minutes versions itself. It shared the suite's number while every app lived in
        one repository, which was never quite honest - this app changes on its own schedule -
        and is plainly wrong now that each is published separately. Shown rather than kept
-       internal for the same reason Minutes shows its own: this is the number someone reads
+       internal for the same reason Secretary shows its own: this is the number someone reads
        back when reporting that something misbehaved at a singing. -->
   <p id="versionFooter" style="text-align:center;font-size:11px;color:var(--ink-faint);margin:14px 0 0;"></p>
 </div>
 
 <!-- Bundled purely as an offline fallback for the Registry fetch below (see the header
      comment). Defines the global EZ_MINUTES_TUNEBOOK_LIBRARY the same way it does for
-     Minutes and Tunebooks; this app still prefers the live Registry copy when reachable. -->
+     Secretary and Bibliographer; this app still prefers the live Registry copy when reachable. -->
 <script src="tunebook-library.js"></script>
 <script>
 (function(){
@@ -497,7 +497,7 @@
 
   // A structural format version for tunebook-library.js itself - distinct from this
   // suite's Schema 5 CSV format, which has its own separate version. Kept as its own list,
-  // matching Tunebooks' KNOWN_LIBRARY_SCHEMA_VERSIONS, so both apps refuse the same future
+  // matching Bibliographer's KNOWN_LIBRARY_SCHEMA_VERSIONS, so both apps refuse the same future
   // incompatible shape the same way rather than one silently misreading it.
   var KNOWN_LIBRARY_SCHEMA_VERSIONS = ["1"];
 
@@ -575,7 +575,7 @@
     // under this week's session, the "already logged" check would misfire against last
     // week's songs, and the date field would keep showing last week's date rather than
     // defaulting to today. Now surfaces the choice explicitly, the same principle the
-    // main Minutes app's own New Singing vs. Open Singing landing screen already uses,
+    // main Secretary app's own New Singing vs. Open Singing landing screen already uses,
     // rather than a silent tool-specific shortcut around it.
     if(hasSavedLog()){
       showResumeChoice();
@@ -689,7 +689,7 @@
     return Object.values(libraryData.editions).find(function(e){ return e.editionCode === abbr; });
   }
 
-  // Kevin's own call, 2026-09-16: Minutes and Simple Compile both offer a "Show edition
+  // Kevin's own call, 2026-09-16: Secretary and Compile both offer a "Show edition
   // for The Sacred Harp" toggle, but Simple Minutes deliberately does not - this app's own
   // commonName field already tells the 1991 and 2025 editions apart ("Sacred Harp '91" vs
   // "Sacred Harp '25"), so there's no ambiguity here the extra toggle would resolve, and
@@ -1064,7 +1064,7 @@
   var SERIES_REGISTRY_KEY = "simpleMinutesSeriesRegistryV1";
   var currentSeriesCode = null, currentEventId = null, currentPreviousEventId = "";
 
-  // Quiet Series Code / Event ID linking, matching the main Minutes app's own real
+  // Quiet Series Code / Event ID linking, matching the main Secretary app's own real
   // convention exactly (a random, non-human-readable code plus {code}-{date} as the
   // Event ID) - but resolved automatically here rather than asked about. A "regular
   // sing" logged with the same event name each time is exactly the shape of thing that
@@ -1783,7 +1783,7 @@
   });
 
   function saveEntries(){
-    // Matches the main Minutes app's own real saving logic exactly, on Kevin's own
+    // Matches the main Secretary app's own real saving logic exactly, on Kevin's own
     // direction, replacing this tool's previous, separate "autosave every 10 minutes"
     // mechanism (a real, repeated file download) - the main app dropped that same idea
     // already, and a periodic download prompt/notification popping up mid-singing on a
@@ -1833,7 +1833,7 @@
   }
 
   // Declared here, in the app's own file, rather than a separate version file like
-  // Minutes has - this app still loads no *code* dependency but itself (tunebook-library.js,
+  // Secretary has - this app still loads no *code* dependency but itself (tunebook-library.js,
   // added below, is data, read as such, never as a version-carrying script).
   //
   // 1.0.0, 2026-09-16: first public release. Everything before this point in the working
@@ -1884,10 +1884,10 @@
       }
     });
     // Number present, if given, rides in as a real Schema 5 metadata row (meta.present) -
-    // the same field Minutes' own Event Details already reads, writes, and can print in the
+    // the same field Secretary's own Event Details already reads, writes, and can print in the
     // compiled minutes ("62 singers were present") when its Number of Singers toggle is on.
     // Not a new schema field, just Simple Minutes finally exposing one that already existed.
-    // Matches Minutes' own metaRow() convention exactly: Event/Date/Location, every officer
+    // Matches Secretary's own metaRow() convention exactly: Event/Date/Location, every officer
     // column, and Series/Event ID all stay blank on a metadata row - the field/value pair is
     // the entire payload, and repeating the session's own values here would risk a reimport
     // mistaking this row for a second, real session on rehydration.
